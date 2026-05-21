@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMC — Month-End Close</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0C0A08;--ink-2:#6A5D50;--ink-3:#A8998A;
+  --ivory:#F6F3ED;--ivory-2:#EDE8DF;--ivory-3:#DDD6CA;
+  --rule:rgba(12,10,8,.08);
+  --harvest:#F5821F;--harvest-dk:#B85D0A;
+  --field:#1D9E75;--field-dk:#0F6E56;
+  --red:#E24B4A;--amber:#EF9F27;
+  --orange:var(--harvest);--orange-lt:#FEF3E8;
+  --green:var(--field);--green-dk:var(--field-dk);
+  --bg:var(--ivory);--surface:#fff;
+  --border:rgba(12,10,8,.10);--border-lt:rgba(12,10,8,.05);
+  --text:var(--ink);--text-2:var(--ink-2);--text-3:var(--ink-3);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:14px;background:var(--ivory);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* ── App structure (freeze panes) ── */
+#app{height:100%;display:flex;flex-direction:column;overflow:hidden}
+.app-body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.app-header-zone{flex-shrink:0;padding:16px 32px 0;width:100%;max-width:1400px}
+.task-list-zone{flex:1;overflow:hidden;padding:0 32px;width:100%;max-width:1400px;min-height:0}
+
+/* ── Header ── */
+.header{background:rgba(246,243,237,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--rule);padding:0 32px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:50}
+.header-left{display:flex;align-items:center;gap:14px}
+.header-logo{height:38px;width:auto;object-fit:contain;display:block;mix-blend-mode:screen}
+.header-divider{width:1px;height:18px;background:var(--rule);flex-shrink:0}
+.header-brand-name{font-size:11px;font-weight:300;color:var(--ink-2);letter-spacing:.14em;text-transform:uppercase;line-height:1.2}
+.header-brand-sub{font-size:9px;font-weight:500;color:var(--harvest);text-transform:uppercase;letter-spacing:.22em;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px}
+.month-nav{display:flex;align-items:center;gap:4px}
+.mnav-btn{background:none;border:1px solid var(--rule);border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:15px;color:var(--ink-3);display:flex;align-items:center;justify-content:center;transition:background .12s}
+.mnav-btn:hover{background:var(--ivory-2)}
+.month-label{font-size:12px;font-weight:300;letter-spacing:.06em;min-width:134px;text-align:center;color:var(--ink)}
+.user-select{font-size:11px;padding:0 10px;border:1px solid var(--rule);border-radius:5px;background:transparent;color:var(--ink);cursor:pointer;height:28px;font-family:inherit}
+.owner-toggle-btn{font-size:10px;padding:0 12px;border:1px solid var(--rule);border-radius:5px;background:transparent;color:var(--ink-3);cursor:pointer;height:28px;white-space:nowrap;transition:all .12s;font-family:inherit;letter-spacing:.06em}
+.owner-toggle-btn:hover{background:var(--ivory-2)}
+.owner-toggle-btn.active{background:var(--ink);border-color:var(--ink);color:var(--ivory)}
+.btn-copy-month{font-size:10px;padding:0 10px;border:1px solid var(--rule);border-radius:5px;background:transparent;color:var(--ink-3);cursor:pointer;height:28px;white-space:nowrap;transition:all .12s;font-family:inherit;letter-spacing:.04em}
+.btn-copy-month:hover{background:var(--ivory-2)}
+.icon-btn{background:none;border:1px solid var(--rule);border-radius:5px;width:28px;height:28px;cursor:pointer;font-size:14px;color:var(--ink-3);display:flex;align-items:center;justify-content:center;transition:background .12s}
+.icon-btn:hover{background:var(--ivory-2)}
+.saving-dot{width:7px;height:7px;border-radius:50%;background:var(--ivory-3);display:inline-block;flex-shrink:0}
+.saving-dot.saving{background:var(--amber);animation:pulse .8s infinite}
+.saving-dot.saved{background:var(--field)}
+.saving-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Hero card ── */
+.hero-card{background:linear-gradient(135deg,#064E3B 0%,#065F46 45%,#047857 100%);border-radius:8px;padding:20px 28px;margin-bottom:14px;color:#fff;display:flex;align-items:center;position:relative;overflow:hidden}
+.hero-card::before{content:'';position:absolute;right:-70px;top:-70px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04);pointer-events:none}
+.hero-card::after{content:'';position:absolute;right:100px;bottom:-90px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.03);pointer-events:none}
+.hero-pct-block{flex-shrink:0;padding-right:28px;border-right:1px solid rgba(255,255,255,.12);margin-right:28px;z-index:1;text-align:center}
+.hero-pct{font-size:48px;font-weight:100;line-height:1;letter-spacing:-.04em}
+.hero-pct-lbl{font-size:9px;font-weight:500;opacity:.5;text-transform:uppercase;letter-spacing:.18em;margin-top:4px}
+.hero-mid{flex:1;z-index:1;min-width:0}
+.hero-prog-track{width:100%;height:5px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;margin-bottom:16px}
+.hero-prog-fill{height:100%;background:rgba(255,255,255,.7);border-radius:3px;transition:width .6s ease}
+.hero-kpis{display:flex;align-items:flex-start}
+.hero-kpi{flex:1;padding:0 18px;border-right:1px solid rgba(255,255,255,.1);text-align:center}
+.hero-kpi:first-child{padding-left:0;text-align:left}
+.hero-kpi:nth-child(4){border-right:none}
+.hero-kpi-num{font-size:26px;font-weight:100;line-height:1;margin-bottom:4px;letter-spacing:-.03em}
+.hero-kpi-lbl{font-size:8px;font-weight:500;opacity:.45;text-transform:uppercase;letter-spacing:.14em;white-space:nowrap}
+.hk-ip{color:#FCD34D}.hk-blocked{color:#FCA5A5}.hk-open{opacity:.35}
+.hero-total{font-size:10px;opacity:.35;align-self:flex-end;padding-left:18px;white-space:nowrap;padding-bottom:2px;font-weight:300}
+
+/* ── Entity summary ── */
+.entity-summary-section{margin-bottom:12px}
+.entity-summary-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.entity-summary-title{font-size:9px;font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.18em}
+.entity-toggle{display:flex;gap:4px}
+.etog-btn{font-size:9px;padding:4px 12px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink-3);cursor:pointer;transition:all .12s;font-family:inherit;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.etog-btn:hover{background:var(--ivory-2)}
+.etog-btn.active{background:var(--field);border-color:var(--field);color:#fff}
+.entity-cards-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.entity-card{background:rgba(255,255,255,.6);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;min-width:88px;flex:1;transition:box-shadow .15s,transform .15s}
+.entity-card:hover{box-shadow:0 4px 14px rgba(12,10,8,.07);transform:translateY(-1px)}
+.entity-card.rollup{border-color:rgba(29,158,117,.22);background:linear-gradient(135deg,rgba(240,253,249,.8),rgba(236,253,245,.8));flex:1.4;min-width:110px}
+.entity-card-name{font-size:9px;font-weight:500;letter-spacing:.14em;color:var(--ink-3);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
+.entity-card.rollup .entity-card-name{color:var(--field-dk);font-weight:600}
+.entity-card-stat{font-size:20px;font-weight:200;color:var(--ink);line-height:1;letter-spacing:-.02em}
+.entity-card-stat span{font-size:12px;color:var(--ink-3);font-weight:300}
+.entity-card-sub{font-size:10px;color:var(--ink-3);margin-top:3px;font-weight:300}
+.entity-mini-bar{width:100%;height:3px;background:var(--ivory-3);border-radius:2px;overflow:hidden;margin-top:7px}
+.entity-mini-fill{height:3px;border-radius:2px;background:var(--field);transition:width .4s}
+.entity-blocked-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-left:4px;vertical-align:middle}
+.clients-divider{font-size:9px;font-weight:500;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase;margin-bottom:8px;margin-top:4px;display:flex;align-items:center;gap:8px}
+.clients-divider::after{content:'';flex:1;height:1px;background:var(--rule)}
+
+/* ── Filter bar ── */
+.filter-bar{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;background:rgba(246,243,237,.7);border:1px solid var(--rule);border-radius:6px;padding:8px 14px}
+.filter-bar label{font-size:9px;font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.14em}
+.filter-bar select,.filter-bar input[type=text]{font-size:11px;padding:0 10px;border:1px solid var(--rule);border-radius:4px;background:var(--ivory);color:var(--ink);height:28px;font-family:inherit}
+.filter-bar select:focus,.filter-bar input:focus{outline:none;border-color:var(--ink-3);background:#fff}
+.btn-add{font-size:10px;padding:0 16px;border:none;border-radius:4px;background:var(--ink);color:var(--ivory);cursor:pointer;margin-left:auto;font-weight:500;height:28px;transition:opacity .14s;font-family:inherit;letter-spacing:.08em;text-transform:uppercase}
+.btn-add:hover{opacity:.8}
+
+/* ── Section blocks ── */
+.section-block{background:rgba(255,255,255,.6);border:1px solid var(--rule);border-radius:6px;margin-bottom:8px;overflow:hidden}
+.section-head{padding:9px 14px 9px 12px;background:rgba(246,243,237,.7);border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:10px;border-left:3px solid var(--harvest);cursor:default}
+.section-name{font-size:9px;font-weight:500;color:var(--ink-2);text-transform:uppercase;letter-spacing:.14em;flex-shrink:0}
+.section-mini-bar-wrap{flex:1;max-width:120px}
+.section-mini-bar{width:100%;height:3px;background:var(--ivory-3);border-radius:2px;overflow:hidden}
+.section-mini-fill{height:3px;border-radius:2px;background:var(--field);transition:width .4s}
+.section-prog{font-size:10px;color:var(--ink-3);white-space:nowrap;margin-left:auto;font-variant-numeric:tabular-nums;font-weight:300}
+.collapse-btn{background:none;border:none;cursor:pointer;color:var(--ivory-3);font-size:12px;padding:0 2px;line-height:1;transition:transform .2s,color .12s;flex-shrink:0;width:18px;text-align:center}
+.collapse-btn:hover{color:var(--ink-3)}
+.collapse-btn.is-collapsed{transform:rotate(-90deg)}
+.section-body.collapsed{display:none}
+
+/* ── Task table ── */
+table.tasks{width:100%;border-collapse:collapse;table-layout:fixed}
+table.tasks th{font-size:9px;font-weight:500;color:var(--ink-3);padding:6px 12px;text-align:left;border-bottom:1px solid var(--rule);text-transform:uppercase;letter-spacing:.12em;background:rgba(246,243,237,.6)}
+table.tasks td{padding:9px 12px;border-bottom:1px solid rgba(12,10,8,.05);vertical-align:middle}
+table.tasks tr:last-child td{border-bottom:none}
+table.tasks tr:hover td{background:rgba(246,243,237,.45)}
+.col-drag{width:22px;padding:0 3px!important}
+.col-check{width:36px}
+.col-task{width:auto}
+.col-owner{width:80px}
+.col-due{width:106px}
+.col-status{width:126px}
+.col-note{width:200px}
+.col-actions{width:56px}
+.check-wrap{display:flex;align-items:center;justify-content:center}
+input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--field)}
+.row-drag-handle{font-size:12px;color:var(--ivory-3);cursor:grab;user-select:none;display:block;text-align:center;line-height:1;padding:2px 0}
+.row-drag-handle:hover{color:var(--ink-3)}
+tr.row-dragging{opacity:.35}
+tr.row-drag-over td{border-top:2px solid var(--field)!important}
+
+/* ── Row status coloring ── */
+tr.row-blocked td{background:#FFF8F8!important}
+tr.row-blocked:hover td{background:#FFEAEA!important}
+tr.row-blocked td.col-check{border-left:2px solid var(--red)}
+tr.row-ip td{background:#FFFCF5!important}
+tr.row-ip:hover td{background:#FFF8E7!important}
+tr.row-ip td.col-check{border-left:2px solid var(--amber)}
+tr.row-done td{background:#F7FDF9!important}
+tr.row-done:hover td{background:#EEFAF3!important}
+tr.row-done td.col-check{border-left:2px solid var(--field)}
+
+/* ── Task cell ── */
+.task-name-line{display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap}
+.task-name-text{font-size:13px;font-weight:400;color:var(--ink);line-height:1.3}
+tr.row-done .task-name-text{text-decoration:line-through;color:var(--ink-3)}
+.task-meta-line{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.entity-chip{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;white-space:nowrap}
+.cadence-chip{font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap}
+
+/* ── Flag input ── */
+.flag-inp{font-size:10px;padding:2px 8px;border-radius:999px;border:1px dashed var(--ivory-3);background:transparent;color:var(--ink-2);min-width:60px;max-width:130px;cursor:text;transition:all .12s;font-family:inherit}
+.flag-inp:not(:placeholder-shown){background:var(--orange-lt);color:#92400E;border-color:transparent;font-weight:500}
+.flag-inp:focus{outline:none;border-color:var(--amber);background:var(--orange-lt);color:#92400E}
+.flag-inp::placeholder{color:var(--ivory-3);font-style:italic}
+
+/* ── Owner badges ── */
+.badge{display:inline-block;font-size:10px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap;letter-spacing:.02em}
+
+/* ── Status select ── */
+.status-sel{font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:4px;width:100%;cursor:pointer;font-weight:400;font-family:inherit;background:transparent;color:var(--ink)}
+.status-sel.s-done{border-color:rgba(29,158,117,.3);background:rgba(240,253,249,.5)}
+.status-sel.s-ip{border-color:rgba(239,159,39,.3);background:rgba(255,251,235,.5)}
+.status-sel.s-blocked{border-color:rgba(226,75,74,.3);background:rgba(255,245,245,.5)}
+
+/* ── Note / due inputs ── */
+.note-inp{font-size:12px;padding:4px 8px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink);width:100%;transition:border-color .12s;font-family:inherit}
+.note-inp:focus{outline:none;border-color:var(--ink-3);background:#fff}
+.due-inp{font-size:11px;padding:4px 7px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink);width:100%;font-family:inherit}
+.due-inp.due-past{border-color:#FCA5A5!important;color:#991B1B;font-weight:600}
+
+/* ── Action buttons ── */
+.btn-del{background:none;border:none;color:var(--ivory-3);cursor:pointer;font-size:16px;padding:0 3px;line-height:1;transition:color .12s}
+.btn-del:hover{color:var(--red)}
+.btn-edit{background:none;border:none;color:var(--ivory-3);cursor:pointer;font-size:13px;padding:0 3px;line-height:1;transition:color .12s}
+.btn-edit:hover{color:var(--field)}
+.empty-state{padding:48px;text-align:center;color:var(--ink-3);font-size:13px;font-weight:300}
+
+/* ── Modals ── */
+.modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(12,10,8,.5);z-index:100;align-items:flex-start;justify-content:center;padding-top:72px;overflow-y:auto;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--ivory);border-radius:8px;padding:28px;width:520px;border:1px solid var(--rule)}
+.modal h3{font-size:18px;font-weight:100;letter-spacing:-.02em;margin-bottom:20px;color:var(--ink)}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:9px;font-weight:500;color:var(--ink-3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.14em}
+.form-row input,.form-row select,.form-row textarea{width:100%;font-size:13px;font-weight:300;padding:9px 11px;border:1px solid var(--ivory-3);border-radius:4px;background:var(--ivory);color:var(--ink);font-family:inherit}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--ink-3);background:#fff}
+.form-row textarea{resize:vertical;min-height:60px}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid var(--rule)}
+.btn-cancel{font-size:10px;padding:9px 18px;border:1px solid var(--rule);border-radius:4px;background:transparent;cursor:pointer;color:var(--ink-2);font-family:inherit;letter-spacing:.08em;text-transform:uppercase;font-weight:500;transition:background .12s}
+.btn-cancel:hover{background:var(--ivory-2)}
+.btn-save{font-size:10px;padding:9px 18px;border:none;border-radius:4px;background:var(--field);color:#fff;cursor:pointer;font-weight:500;letter-spacing:.08em;text-transform:uppercase;font-family:inherit;transition:opacity .14s}
+.btn-save:hover{opacity:.85}
+
+/* ── Settings modal ── */
+.sm-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
+.sm-section:last-of-type{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.sm-section-label{font-size:9px;font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:10px}
+.type-chip-list{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;min-height:28px}
+.type-chip{display:inline-flex;align-items:center;gap:3px;font-size:12px;padding:3px 10px 3px 11px;background:var(--ivory-2);border:1px solid var(--rule);border-radius:999px;color:var(--ink-2);white-space:nowrap}
+.type-chip button{background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:13px;line-height:1;padding:0;margin-left:2px}
+.type-chip button:hover{color:var(--red)}
+.sm-add-row{display:flex;gap:6px}
+.sm-add-row input{flex:1;font-size:12px;padding:6px 10px;border:1px solid var(--ivory-3);border-radius:4px;font-family:inherit;background:var(--ivory);color:var(--ink)}
+.sm-add-row button{font-size:10px;padding:6px 14px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--field-dk);cursor:pointer;font-weight:500;font-family:inherit;letter-spacing:.06em;text-transform:uppercase;transition:background .12s}
+.sm-add-row button:hover{background:var(--ivory-2)}
+.sm-name-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sm-name-role{font-size:12px;font-weight:500;color:var(--ink-2);min-width:52px}
+.sm-name-arrow{color:var(--ivory-3);font-size:12px}
+.sm-name-input{flex:1;font-size:12px;padding:6px 10px;border:1px solid var(--ivory-3);border-radius:4px;font-family:inherit;background:var(--ivory);color:var(--ink)}
+/* Color pickers */
+.sm-color-group{margin-bottom:14px}
+.sm-color-group-label{font-size:9px;font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.sm-color-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sm-color-swatch{width:26px;height:26px;border:1px solid var(--rule);border-radius:5px;cursor:pointer;padding:1px;background:var(--ivory)}
+.sm-color-label{font-size:12px;color:var(--ink-2);flex:1;font-weight:300}
+.sm-color-preview{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+
+/* ── Drag-and-drop sections ── */
+.drag-handle{cursor:grab;color:var(--ivory-3);font-size:15px;margin-right:2px;user-select:none;line-height:1;flex-shrink:0}
+.drag-handle:active{cursor:grabbing}
+.section-block.dragging{opacity:.35}
+.section-block.drag-over{border-color:var(--harvest)!important;box-shadow:0 0 0 2px rgba(245,130,31,.1)!important}
+
+/* ── Setup screen ── */
+.setup-wrap{display:flex;align-items:center;justify-content:center;min-height:100%;padding:32px}
+#setup-screen{height:100%;overflow-y:auto}
+.setup-card{background:var(--ivory);border:1px solid var(--rule);border-radius:8px;padding:40px;width:100%;max-width:440px}
+.setup-logo{height:60px;display:block;margin:0 auto 24px;object-fit:contain;mix-blend-mode:screen}
+.setup-card h2{font-size:24px;font-weight:100;letter-spacing:-.02em;margin-bottom:8px;text-align:center;color:var(--ink)}
+.setup-card p{font-size:13px;font-weight:300;color:var(--ink-2);margin-bottom:24px;line-height:1.6;text-align:center}
+.setup-card input{width:100%;font-family:inherit;font-size:13px;font-weight:300;padding:9px 12px;border:1px solid var(--ivory-3);border-radius:4px;background:var(--ivory);color:var(--ink);margin-bottom:10px}
+.setup-card input:focus{outline:none;border-color:var(--ink-3)}
+.setup-btn{width:100%;font-size:10px;padding:12px;border:none;border-radius:4px;background:var(--ink);color:var(--ivory);cursor:pointer;font-weight:500;margin-top:4px;font-family:inherit;letter-spacing:.14em;text-transform:uppercase;transition:opacity .14s}
+.setup-btn:hover{opacity:.85}
+.setup-hint{font-size:11px;font-weight:300;color:var(--ink-3);margin-top:16px;line-height:1.6;text-align:center}
+
+/* ── Sync error banner ── */
+.sync-err-banner{display:none;align-items:center;gap:10px;background:#FEF2F2;border-bottom:1px solid #FECACA;padding:8px 32px;font-size:12px;color:#991B1B;flex-shrink:0}
+.sync-err-banner strong{flex-shrink:0}
+.sync-err-msg{flex:1;font-family:monospace;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sync-err-reconnect{font-size:11px;padding:3px 10px;border:1px solid #FCA5A5;border-radius:4px;background:#fff;color:#991B1B;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.sync-err-reconnect:hover{background:#FEF2F2}
+
+/* ── Task area (task list + needed-for panel) ── */
+.task-area{display:flex;gap:16px;height:100%}
+#task-list{flex:1;min-width:0;overflow-y:auto;padding-bottom:32px}
+.needed-summary-panel{width:272px;flex-shrink:0;overflow-y:auto;padding-bottom:32px}
+
+/* ── Needed-for tags in task rows ── */
+.task-nf-line{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:5px;min-height:20px}
+.nf-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;padding:2px 7px;border-radius:4px;background:rgba(29,158,117,.08);color:var(--field-dk);white-space:nowrap;font-weight:500;letter-spacing:.04em}
+.nf-tag button{background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:12px;line-height:1;padding:0}
+.nf-tag button:hover{color:var(--red)}
+.nf-sel{font-size:10px;padding:2px 6px;border:1px dashed var(--ivory-3);border-radius:4px;background:transparent;color:var(--ink-3);cursor:pointer;max-width:130px;font-family:inherit}
+.nf-sel:focus{outline:none}
+
+/* ── Needed-for summary panel ── */
+.nf-panel-title{font-size:9px;font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.14em;padding-bottom:10px;border-bottom:1px solid var(--rule);margin-bottom:10px}
+.nf-item-card{background:rgba(255,255,255,.6);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;margin-bottom:8px}
+.nf-item-head{display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px}
+.nf-expand-icon{font-size:11px;color:var(--ink-3);flex-shrink:0;width:14px}
+.nf-item-label{flex:1;font-size:12px;font-weight:400;color:var(--ink)}
+.nf-item-tally{font-size:10px;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:300}
+.nf-item-progbar{width:100%;height:3px;background:var(--ivory-3);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.nf-item-progfill{height:100%;background:var(--field);border-radius:2px;transition:width .4s}
+.nf-ent-row{border-top:1px solid var(--rule);padding:6px 0 0;margin-bottom:4px}
+.nf-ent-head{display:flex;align-items:center;gap:5px;cursor:pointer;margin-bottom:3px}
+.nf-ent-expand{font-size:10px;color:var(--ink-3);flex-shrink:0;width:12px}
+.nf-ent-name{flex:1;font-size:11px;font-weight:400;color:var(--ink-2)}
+.nf-ent-tally{font-size:10px;color:var(--ink-3);white-space:nowrap;font-weight:300}
+.nf-ent-bar{width:100%;height:2px;background:var(--ivory-3);border-radius:2px;overflow:hidden;margin-bottom:4px}
+.nf-ent-fill{height:100%;background:var(--field);border-radius:2px;transition:width .4s}
+.nf-task-item{display:flex;align-items:center;gap:5px;padding:3px 0 3px 14px}
+.nf-task-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.nf-task-name{font-size:11px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:300}
+.nf-panel-empty{font-size:12px;color:var(--ink-3);padding:20px 12px;text-align:center;line-height:1.6;background:rgba(255,255,255,.5);border:1px solid var(--rule);border-radius:6px;font-weight:300}
+
+/* ── Print ── */
+@media print {
+  html,body{height:auto!important;overflow:visible!important}
+  .app-body{height:auto!important;overflow:visible!important;display:block!important}
+  .task-list-zone,.task-area,#task-list{overflow:visible!important;height:auto!important}
+  .header,.sync-err-banner,.entity-summary-section,.filter-bar,
+  .btn-add,.btn-edit,.btn-del,.col-actions,.col-drag,
+  .modal-bg,.needed-summary-panel,.nf-sel{display:none!important}
+  body{background:#fff}
+  .app-header-zone{padding:8px 12px}
+  .section-block{box-shadow:none;border:1px solid #ccc;margin-bottom:6px;break-inside:auto}
+  .section-head{border-left:3px solid #F5821F;padding:5px 10px}
+  .section-name{font-size:10px}
+  .collapse-btn{display:none!important}
+  .section-body.collapsed{display:block!important}
+  table.tasks{table-layout:auto}
+  table.tasks td,table.tasks th{padding:2px 5px;font-size:10px;line-height:1.3}
+  tr{break-inside:avoid}
+  .task-name-line{margin-bottom:1px}
+  .task-meta-line{gap:3px}
+  .task-nf-line,.flag-inp{display:none!important}
+  .hero-card{background:#064E3B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-radius:8px;margin-bottom:6px;padding:12px 20px}
+  .hero-pct{font-size:36px}
+  .hero-kpi-num{font-size:20px}
+  .note-inp,.due-inp,.status-sel{border:none;background:transparent!important;padding:0;font-size:10px}
+  .badge,.entity-chip,.cadence-chip,.nf-tag{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr.row-done td{background:#F0FDF4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr.row-blocked td{background:#FFF5F5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr.row-ip td{background:#FFFBEB!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-hide{display:none!important}
+}
+/* ── Night Mode ── */
+body.dark{--ivory:#100E0C;--ivory-2:#1C1916;--ivory-3:#2E2926;--ink:#F6F3ED;--ink-2:#A8998A;--ink-3:#6A5D50;--rule:rgba(246,243,237,.08)}
+.toggle-track{width:44px;height:24px;border-radius:12px;background:var(--ivory-3);position:relative;transition:background .2s;cursor:pointer;flex-shrink:0}
+.toggle-track.on{background:var(--harvest)}
+.toggle-track::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-track.on::after{transform:translateX(20px)}
+/* ── Loading Overlay ── */
+#loading-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0C0A08 0%,#1C1916 50%,#0C0A08 100%);z-index:9999;display:flex;align-items:center;justify-content:center;transition:opacity .5s ease}
+#loading-overlay.ld-fade{opacity:0;pointer-events:none}
+#loading-overlay.ld-gone{display:none}
+.ld-wrap{text-align:center;color:#F6F3ED;user-select:none}
+.ld-logo-wrap{width:120px;height:120px;margin:0 auto 24px;position:relative;display:flex;align-items:center;justify-content:center}
+.ld-logo-wrap::before{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid rgba(246,243,237,.12);animation:ld-pulse 2.2s ease-in-out infinite}
+.ld-logo-wrap::after{content:'';position:absolute;inset:-10px;border-radius:50%;border:1px solid rgba(246,243,237,.05)}
+.ld-spin-ring{position:absolute;inset:-4px;border-radius:50%;border:3px solid transparent;border-top-color:#F5821F;border-right-color:rgba(245,130,31,.3);animation:ld-spin 1.1s linear infinite}
+.ld-icon{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#F5821F,#F5A023);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px;box-shadow:0 0 40px rgba(245,130,31,.45);animation:ld-glow 2s ease-in-out infinite}
+@keyframes ld-spin{to{transform:rotate(360deg)}}
+@keyframes ld-pulse{0%,100%{transform:scale(1);opacity:.25}50%{transform:scale(1.1);opacity:.65}}
+@keyframes ld-glow{0%,100%{box-shadow:0 0 32px rgba(245,130,31,.4)}50%{box-shadow:0 0 56px rgba(245,130,31,.7)}}
+.ld-brand{font-size:13px;font-weight:300;letter-spacing:.22em;text-transform:uppercase;opacity:.7;margin-bottom:28px}
+.ld-msg{font-size:13px;opacity:.5}
+.ld-dots span{opacity:0;animation:ld-dot 1.5s infinite}
+.ld-dots span:nth-child(1){animation-delay:0s}
+.ld-dots span:nth-child(2){animation-delay:.3s}
+.ld-dots span:nth-child(3){animation-delay:.6s}
+@keyframes ld-dot{0%,100%{opacity:0}50%{opacity:1}}
+</style>
+</head>
+<body>
+<div id="loading-overlay">
+  <div class="ld-wrap">
+    <div class="ld-logo-wrap">
+      <div class="ld-spin-ring"></div>
+      <div class="ld-icon">CMC</div>
+    </div>
+    <div class="ld-brand">Crop Management Company</div>
+    <div class="ld-msg"><span class="ld-msg-text">Loading</span><span class="ld-dots"><span>.</span><span>.</span><span>.</span></span></div>
+  </div>
+</div>
+
+<!-- Setup screen -->
+<div id="setup-screen" style="display:none">
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <h2>Connect to Airtable</h2>
+      <p>Enter your Airtable credentials to enable persistent storage across sessions and devices.</p>
+      <input id="cfg-base" placeholder="Base ID (e.g. appXXXXXXXXXXXXXX)" />
+      <input id="cfg-token" placeholder="Personal Access Token (pat...)" />
+      <input id="cfg-table" placeholder="Table name (default: CloseTracker)" value="CloseTracker" />
+      <button class="setup-btn" onclick="saveConfig()">Connect</button>
+      <div class="setup-hint">
+        Credentials stored in this browser only.<br>
+        Required fields: Month · TaskId · Section · Task · Entity · Cadence · Owner · Flag · DueDate · Status · Note · Checked · UpdatedBy · NeededFor
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" style="display:none">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div>
+        <div class="header-brand-name">Crop Management Company</div>
+        <div class="header-brand-sub">Month-End Close</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="month-nav">
+        <button class="mnav-btn" onclick="changeMonth(-1)">&#8249;</button>
+        <div class="month-label" id="month-display"></div>
+        <button class="mnav-btn" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+      <button class="btn-copy-month" onclick="openCopyModal()" title="Copy tasks from another month">&#8599; Copy from&hellip;</button>
+      <select class="user-select" id="user-sel" onchange="applyFilters()">
+        <option value="all">All team</option>
+      </select>
+      <button class="owner-toggle-btn" id="owner-view-btn" onclick="toggleOwnerView()">By name</button>
+      <button class="icon-btn" onclick="window.print()" title="Print current view">&#128438;</button>
+      <button class="icon-btn" onclick="openSettings()" title="Manage lists">&#9881;</button>
+      <span class="saving-dot" id="sync-dot" title="Sync status"></span>
+    </div>
+  </header>
+
+  <!-- Sync error banner -->
+  <div class="sync-err-banner" id="sync-err-banner">
+    <strong>&#9888; Airtable sync error</strong>
+    <span class="sync-err-msg" id="sync-err-msg"></span>
+    <button class="sync-err-reconnect" onclick="openReconnect()">Update credentials</button>
+  </div>
+
+  <!-- App body (header zone + scrollable task list) -->
+  <div class="app-body">
+    <div class="app-header-zone">
+
+      <!-- Hero summary -->
+      <div class="hero-card">
+        <div class="hero-pct-block">
+          <div class="hero-pct" id="s-pct">0%</div>
+          <div class="hero-pct-lbl">closed</div>
+        </div>
+        <div class="hero-mid">
+          <div class="hero-prog-track"><div class="hero-prog-fill" id="s-prog" style="width:0%"></div></div>
+          <div class="hero-kpis">
+            <div class="hero-kpi"><div class="hero-kpi-num" id="s-done">0</div><div class="hero-kpi-lbl">Done</div></div>
+            <div class="hero-kpi"><div class="hero-kpi-num hk-ip" id="s-ip">0</div><div class="hero-kpi-lbl">In progress</div></div>
+            <div class="hero-kpi"><div class="hero-kpi-num hk-blocked" id="s-blocked">0</div><div class="hero-kpi-lbl">Blocked</div></div>
+            <div class="hero-kpi"><div class="hero-kpi-num hk-open" id="s-open">0</div><div class="hero-kpi-lbl">Not started</div></div>
+            <div class="hero-total"><strong id="s-total">0</strong> tasks total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Entity summary -->
+      <div class="entity-summary-section">
+        <div class="entity-summary-header">
+          <span class="entity-summary-title">Entity summary</span>
+          <div class="entity-toggle">
+            <button class="etog-btn" id="etog-operating" onclick="setEntityRollup('operating')">Operating</button>
+            <button class="etog-btn" id="etog-ranch"     onclick="setEntityRollup('ranch')">Ranch</button>
+            <button class="etog-btn" id="etog-clients"   onclick="setEntityRollup('clients')">Clients</button>
+          </div>
+        </div>
+        <div id="entity-summary-body"></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <label>Group:</label>
+        <select id="f-group" onchange="applyFilters()">
+          <option value="section">Section</option>
+          <option value="entity">Entity</option>
+          <option value="owner">Owner</option>
+        </select>
+        <select id="f-cadence" onchange="applyFilters()">
+          <option value="all">All cadences</option>
+        </select>
+        <select id="f-status" onchange="applyFilters()">
+          <option value="all">All statuses</option>
+        </select>
+        <select id="f-entity" onchange="applyFilters()">
+          <option value="all">All entities</option>
+        </select>
+        <input type="text" id="f-search" placeholder="Search tasks…" style="width:160px" oninput="applyFilters()">
+        <button class="btn-add" onclick="openAddModal()">+ Add task</button>
+      </div>
+
+    </div><!-- /app-header-zone -->
+
+    <div class="task-list-zone">
+      <div class="task-area">
+        <div id="task-list"></div>
+        <div id="needed-summary" class="needed-summary-panel"></div>
+      </div>
+    </div>
+  </div><!-- /app-body -->
+
+</div><!-- /app -->
+
+<!-- Add / Edit Task Modal -->
+<div class="modal-bg" id="add-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add task</h3>
+    <div class="form-row">
+      <label>Task name</label>
+      <input id="m-task" placeholder="e.g. Bank reconciliation — Crop" />
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Section</label><select id="m-section"></select></div>
+      <div class="form-row" style="margin:0"><label>Owner / role</label><select id="m-owner"></select></div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Entity</label><select id="m-entity"></select></div>
+      <div class="form-row" style="margin:0"><label>Cadence</label><select id="m-cadence"></select></div>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin:0"><label>Due date</label><input type="date" id="m-due" /></div>
+      <div class="form-row" style="margin:0"><label>Flag</label><input id="m-flag" placeholder="e.g. needs process" /></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveTask()">Save task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-bg" id="settings-modal">
+  <div class="modal" style="width:580px;max-height:84vh;overflow-y:auto">
+    <h3>Manage lists &amp; colors</h3>
+    <p style="font-size:12px;font-weight:300;color:var(--ink-3);margin-bottom:20px;line-height:1.6">Manage sections, owners, statuses, and customize badge colors.</p>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Sections</div>
+      <div class="type-chip-list" id="sm-list-sections"></div>
+      <div class="sm-add-row">
+        <input id="sm-input-sections" placeholder="Add section…" onkeydown="if(event.key==='Enter')addTypeItem('sections')" />
+        <button onclick="addTypeItem('sections')">Add</button>
+      </div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Entities</div>
+      <div class="type-chip-list" id="sm-list-entities"></div>
+      <div class="sm-add-row">
+        <input id="sm-input-entities" placeholder="Add entity…" onkeydown="if(event.key==='Enter')addTypeItem('entities')" />
+        <button onclick="addTypeItem('entities')">Add</button>
+      </div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Cadences</div>
+      <div class="type-chip-list" id="sm-list-cadences"></div>
+      <div class="sm-add-row">
+        <input id="sm-input-cadences" placeholder="Add cadence…" onkeydown="if(event.key==='Enter')addTypeItem('cadences')" />
+        <button onclick="addTypeItem('cadences')">Add</button>
+      </div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Owners</div>
+      <div class="type-chip-list" id="sm-list-owners"></div>
+      <div class="sm-add-row">
+        <input id="sm-input-owners" placeholder="Add owner…" onkeydown="if(event.key==='Enter')addTypeItem('owners')" />
+        <button onclick="addTypeItem('owners')">Add</button>
+      </div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Employee names <span style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--ink-3);font-size:11px">— role → display name</span></div>
+      <p style="font-size:12px;font-weight:300;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Used when "By name" view is active.</p>
+      <div id="sm-name-map"></div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Statuses</div>
+      <div class="type-chip-list" id="sm-list-statuses"></div>
+      <div class="sm-add-row">
+        <input id="sm-input-statuses" placeholder="Add status…" onkeydown="if(event.key==='Enter')addTypeItem('statuses')" />
+        <button onclick="addTypeItem('statuses')">Add</button>
+      </div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Badge colors</div>
+      <p style="font-size:12px;font-weight:300;color:var(--ink-3);margin-bottom:14px;line-height:1.5">
+        Customize background and text colors. Left swatch = background, right swatch = text.
+        <button onclick="resetAllColors()" style="font-size:10px;padding:3px 10px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink-2);cursor:pointer;margin-left:8px;font-family:inherit;letter-spacing:.06em;text-transform:uppercase">Reset defaults</button>
+      </p>
+      <div id="sm-color-body"></div>
+    </div>
+
+    <div class="sm-section">
+      <div class="sm-section-label">Needed for items</div>
+      <p style="font-size:12px;font-weight:300;color:var(--ink-3);margin-bottom:10px;line-height:1.5">Define deliverables tasks can be tagged with (e.g. &ldquo;Balance Sheet&rdquo;, &ldquo;Profit &amp; Loss&rdquo;).</p>
+      <div class="type-chip-list" id="sm-list-neededfor"></div>
+      <div class="sm-add-row">
+        <input id="sm-input-neededfor" placeholder="Add item…" onkeydown="if(event.key==='Enter')addTypeItem('neededfor')" />
+        <button onclick="addTypeItem('neededfor')">Add</button>
+      </div>
+    </div>
+
+    <div class="sm-section" style="border-top:1px solid var(--rule);padding-top:16px;margin-top:4px">
+      <div class="sm-section-label">Appearance</div>
+      <label style="display:flex;align-items:center;gap:14px;cursor:pointer;padding:8px 0" onclick="toggleDarkMode()">
+        <div class="toggle-track" id="dark-track"></div>
+        <div>
+          <div style="font-size:13px;font-weight:400;color:var(--ink)">Night Mode</div>
+          <div style="font-size:11px;color:var(--ink-3);margin-top:2px">Switch to dark backgrounds</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copy from Month Modal -->
+<div class="modal-bg" id="copy-modal">
+  <div class="modal" style="width:420px">
+    <h3>Copy from another month</h3>
+    <p style="font-size:12px;font-weight:300;color:var(--ink-3);margin-bottom:20px;line-height:1.6">
+      Copy tasks into <strong id="copy-dest-label"></strong> from the selected source month.
+    </p>
+    <div class="form-row">
+      <label>Source month</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+        <button class="mnav-btn" onclick="changeCopySource(-1)">&#8249;</button>
+        <div id="copy-src-label" style="flex:1;text-align:center;font-weight:300;font-size:14px;color:var(--ink)"></div>
+        <button class="mnav-btn" onclick="changeCopySource(1)">&#8250;</button>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:16px">
+      <label style="margin-bottom:10px">What to copy</label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:10px;text-transform:none;color:var(--ink);letter-spacing:0;font-weight:300">
+        <input type="checkbox" id="copy-custom-tasks" checked style="width:16px;height:16px;accent-color:var(--field)">
+        Custom tasks (tasks added manually, id ≥ 1000)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;text-transform:none;color:var(--ink);letter-spacing:0;font-weight:300">
+        <input type="checkbox" id="copy-due-dates" style="width:16px;height:16px;accent-color:var(--field)">
+        Due dates from built-in tasks
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCopyModal()">Cancel</button>
+      <button class="btn-save" onclick="executeCopy()">Copy tasks</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Default type lists ────────────────────────────────────────────────────────
+// ── Airtable credentials ──────────────────────────────────────────────────────
+const AT_BASE         = 'appyUqaLZAFWtuaA2';
+const AT_TOKEN        = 'patQuZAoVgtvCQAHe.2c3739c626ea78516d5fb009e8277e6a4edf843bc79948ee13a49bb4e489e00f';
+const AT_TABLE        = 'CloseTracker';
+const AT_CONFIG_TABLE = 'CloseConfig';   // Key (text) + Value (long text) table
+
+const DEFAULT_SECTIONS = ['Bank & Debt','Journal Entries','Imports & Uploads','Intercompany & Schedules','Financial Statements','Client Expense Reports','Production Related','Daily Operations','Other'];
+const DEFAULT_ENTITIES = ['All','Crop','JMFS','Propane','CMC Ag','JNF4','Jasmine','FBLP','Fisher Citrus','Jensen','Johns','CMC Citrus','GSE','Clients'];
+const DEFAULT_CADENCES = ['Monthly','Weekly','Daily','Quarterly','Yearly'];
+const DEFAULT_OWNERS   = ['SGA','SA 1','SA 2','All'];
+const DEFAULT_STATUSES = ['Not started','In progress','Done','Blocked'];
+
+const DEFAULT_COLORS = {
+  owners:   { 'SGA':{'bg':'#EEF2FF','text':'#3730A3'},'SA 1':{'bg':'#E0F2FE','text':'#0369A1'},'SA 2':{'bg':'#ECFDF5','text':'#065F46'},'All':{'bg':'#F3F4F6','text':'#6B7280'} },
+  statuses: { 'Not started':{'bg':'#F9FAFB','text':'#6B7280'},'In progress':{'bg':'#FFFBEB','text':'#92400E'},'Done':{'bg':'#ECFDF5','text':'#065F46'},'Blocked':{'bg':'#FEF2F2','text':'#991B1B'} },
+  entities: {},
+  cadences: {}
+};
+
+const ENTITY_GROUPS = {
+  operating: ['Crop','JMFS','CMC Ag','Propane'],
+  ranch:     ['JNF4','Jasmine','FBLP','Fisher Citrus','Jensen','Johns','CMC Citrus']
+};
+
+let SECTIONS = [], ENTITIES = [], CADENCES = [], OWNERS = [], STATUSES = [];
+
+function loadTypeLists() {
+  SECTIONS     = JSON.parse(localStorage.getItem('cmc_sections')     || 'null') || [...DEFAULT_SECTIONS];
+  ENTITIES     = JSON.parse(localStorage.getItem('cmc_entities')     || 'null') || [...DEFAULT_ENTITIES];
+  CADENCES     = JSON.parse(localStorage.getItem('cmc_cadences')     || 'null') || [...DEFAULT_CADENCES];
+  OWNERS       = JSON.parse(localStorage.getItem('cmc_owners')       || 'null') || [...DEFAULT_OWNERS];
+  STATUSES     = JSON.parse(localStorage.getItem('cmc_statuses')     || 'null') || [...DEFAULT_STATUSES];
+  ownerNameMap  = JSON.parse(localStorage.getItem('cmc_owner_names') || '{}');
+  ownerViewMode = localStorage.getItem('cmc_owner_view') || 'role';
+  entityRollup  = localStorage.getItem('cmc_entity_rollup') || 'operating';
+  groupOrders   = JSON.parse(localStorage.getItem('cmc_group_orders') || '{}');
+  collapsedGroups = JSON.parse(localStorage.getItem('cmc_collapsed')  || '{}');
+  taskOrders    = JSON.parse(localStorage.getItem('cmc_task_orders') || '{}');
+  colorMaps     = JSON.parse(localStorage.getItem('cmc_color_maps')  || '{}');
+  deletedTaskIds = new Set(JSON.parse(localStorage.getItem('cmc_deleted_ids') || '[]'));
+  if (!colorMaps.owners)   colorMaps.owners   = {};
+  if (!colorMaps.statuses) colorMaps.statuses = {};
+  if (!colorMaps.entities) colorMaps.entities = {};
+  if (!colorMaps.cadences) colorMaps.cadences = {};
+  neededForList = JSON.parse(localStorage.getItem('cmc_needed_for') || '[]');
+}
+
+// ── Task definitions ──────────────────────────────────────────────────────────
+const TASK_DEFS = [
+  {id:1,section:"Bank & Debt",task:"MB Bank export/import",entity:"All",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:2,section:"Bank & Debt",task:"Bank reconciliation — Crop, JMFS",entity:"Crop",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:3,section:"Bank & Debt",task:"Bank reconciliation — Propane, CMC Ag",entity:"Propane",cadence:"Monthly",owner:"SA 2",flag:""},
+  {id:4,section:"Bank & Debt",task:"Bank reconciliation — ranch entities (×8)",entity:"All",cadence:"Monthly",owner:"SGA",flag:""},
+  {id:5,section:"Bank & Debt",task:"Debt schedule update",entity:"All",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:6,section:"Bank & Debt",task:"Loan interest reclass",entity:"All",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:7,section:"Journal Entries",task:"Payroll JE — Crop, JMFS",entity:"Crop",cadence:"Weekly",owner:"SA 1",flag:""},
+  {id:8,section:"Journal Entries",task:"Payroll JE — Propane",entity:"Propane",cadence:"Weekly",owner:"SA 2",flag:""},
+  {id:9,section:"Journal Entries",task:"Inventory adjustment — Propane",entity:"Propane",cadence:"Monthly",owner:"SA 2",flag:""},
+  {id:10,section:"Journal Entries",task:"Crop on tree JE",entity:"Crop",cadence:"Monthly",owner:"SGA",flag:""},
+  {id:11,section:"Journal Entries",task:"Preproductive assets JE",entity:"All",cadence:"Monthly",owner:"SGA",flag:""},
+  {id:12,section:"Journal Entries",task:"Cultural cost accrual JE",entity:"All",cadence:"Monthly",owner:"SGA",flag:""},
+  {id:13,section:"Journal Entries",task:"Current portion of LTD JE",entity:"All",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:14,section:"Journal Entries",task:"Accrued AR JE",entity:"All",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:15,section:"Imports & Uploads",task:"Bill.com CC upload — Crop, CMC Ag",entity:"Crop",cadence:"Weekly",owner:"SA 2",flag:"moved from KD"},
+  {id:16,section:"Imports & Uploads",task:"Nutrien payment reclass (Bill.com)",entity:"Crop",cadence:"Weekly",owner:"SA 2",flag:"moved from KD"},
+  {id:17,section:"Imports & Uploads",task:"AMEX CC upload — Crop",entity:"Crop",cadence:"Weekly",owner:"SA 2",flag:"needs process"},
+  {id:18,section:"Imports & Uploads",task:"JMFS timesheet import (billing)",entity:"JMFS",cadence:"Weekly",owner:"SA 2",flag:""},
+  {id:19,section:"Imports & Uploads",task:"CMC Ag invoice import",entity:"CMC Ag",cadence:"Weekly",owner:"SA 2",flag:"move to KD"},
+  {id:20,section:"Imports & Uploads",task:"JMFS revenue import",entity:"JMFS",cadence:"Weekly",owner:"SA 2",flag:""},
+  {id:21,section:"Imports & Uploads",task:"Crop COGS import (JMFS rev)",entity:"Crop",cadence:"Weekly",owner:"SA 2",flag:""},
+  {id:22,section:"Intercompany & Schedules",task:"Interco invoice payments (due to/from)",entity:"All",cadence:"Monthly",owner:"SGA",flag:"needs process"},
+  {id:23,section:"Intercompany & Schedules",task:"Due to/from reconciliation",entity:"All",cadence:"Monthly",owner:"SGA",flag:"needs process"},
+  {id:24,section:"Intercompany & Schedules",task:"FBL/FBT due to/from schedule",entity:"All",cadence:"Monthly",owner:"SA 2",flag:"needs info from Francisco"},
+  {id:25,section:"Intercompany & Schedules",task:"ByWater summary",entity:"Crop",cadence:"Weekly",owner:"SA 1",flag:""},
+  {id:26,section:"Financial Statements",task:"P&L — Crop, JMFS",entity:"Crop",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:27,section:"Financial Statements",task:"P&L — Propane, CMC Ag",entity:"Propane",cadence:"Monthly",owner:"SA 2",flag:""},
+  {id:28,section:"Financial Statements",task:"P&L — ranch entities (×8)",entity:"All",cadence:"Monthly",owner:"SGA",flag:"needs training"},
+  {id:29,section:"Financial Statements",task:"Balance sheet — Crop, JMFS",entity:"Crop",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:30,section:"Financial Statements",task:"Balance sheet — Propane, CMC Ag",entity:"Propane",cadence:"Monthly",owner:"SA 2",flag:""},
+  {id:31,section:"Financial Statements",task:"Balance sheet — ranch entities (×8)",entity:"All",cadence:"Monthly",owner:"SGA",flag:"needs process"},
+  {id:32,section:"Client Expense Reports",task:"Expense report — CAPS",entity:"Clients",cadence:"Weekly",owner:"SA 1",flag:""},
+  {id:33,section:"Client Expense Reports",task:"Expense report — Reliance",entity:"Clients",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:34,section:"Client Expense Reports",task:"Yellow Edison — production summary",entity:"Clients",cadence:"Monthly",owner:"SA 1",flag:""},
+  {id:35,section:"Client Expense Reports",task:"Yellow Edison — bank reconciliation",entity:"Clients",cadence:"Monthly",owner:"SA 1",flag:""},
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentMonth = '';
+let taskData = {};
+let airtableRecords = {};
+let saveQueue = {};
+let saveTimer = null;
+let nextCustomId = 1000;
+let editingId = null;
+let monthOffset = 0;
+let ownerNameMap   = {};
+let ownerViewMode  = 'role';
+let entityRollup   = 'operating';
+let groupOrders    = {};
+let collapsedGroups = {};
+let taskOrders     = {};
+let colorMaps      = { owners:{}, statuses:{}, entities:{}, cadences:{} };
+let _dragSrcKey    = null;
+let _dragGroup     = null;
+let _rowDragSrcId  = null;
+let _rowDragSection = null;
+let _copyMonthOffset  = -1;
+let deletedTaskIds    = new Set();
+let neededForList     = [];
+let configRecordIds   = {};
+let expandedNfItems = new Set();
+let expandedNfEntities = new Set();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function opts(arr, selected = '') {
+  let html = arr.map(v => `<option ${v === selected ? 'selected' : ''}>${escHtml(v)}</option>`).join('');
+  if (selected && !arr.includes(selected)) html = `<option selected>${escHtml(selected)}</option>` + html;
+  return html;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function displayOwner(role) {
+  if (ownerViewMode === 'name') return ownerNameMap[role] || role;
+  return role;
+}
+
+function activeTasks() {
+  return TASK_DEFS.filter(t => !deletedTaskIds.has(t.id));
+}
+
+function getColorStyle(category, value) {
+  const stored = (colorMaps[category] || {})[value];
+  if (stored) return `background:${stored.bg};color:${stored.text}`;
+  const def = (DEFAULT_COLORS[category] || {})[value];
+  if (def) return `background:${def.bg};color:${def.text}`;
+  return 'background:#F3F4F6;color:#6B7280';
+}
+
+// ── Entity summary ────────────────────────────────────────────────────────────
+function getEntityStats(entityName) {
+  const tasks = activeTasks().filter(t => t.entity === entityName || (entityName !== 'Clients' && t.entity === 'All'));
+  let done=0, ip=0, blocked=0, open=0;
+  tasks.forEach(t => {
+    const s = (taskData[t.id]||{}).status || 'Not started';
+    if (s==='Done') done++; else if (s==='In progress') ip++; else if (s==='Blocked') blocked++; else open++;
+  });
+  return { total: tasks.length, done, ip, blocked, open };
+}
+
+function getGroupStats(entityList) {
+  const seen = new Set();
+  const tasks = activeTasks().filter(t => {
+    if (seen.has(t.id)) return false;
+    if (t.entity === 'All' || entityList.includes(t.entity)) { seen.add(t.id); return true; }
+    return false;
+  });
+  let done=0, ip=0, blocked=0, open=0;
+  tasks.forEach(t => {
+    const s = (taskData[t.id]||{}).status || 'Not started';
+    if (s==='Done') done++; else if (s==='In progress') ip++; else if (s==='Blocked') blocked++; else open++;
+  });
+  return { total: tasks.length, done, ip, blocked, open };
+}
+
+function entityCardHtml(label, stats, isRollup) {
+  const pct = stats.total ? Math.round(stats.done / stats.total * 100) : 0;
+  const blockedDot = stats.blocked > 0 ? `<span class="entity-blocked-dot" title="${stats.blocked} blocked"></span>` : '';
+  return `<div class="entity-card${isRollup ? ' rollup' : ''}">
+    <div class="entity-card-name">${escHtml(label)}</div>
+    <div style="display:flex;align-items:baseline;gap:3px">
+      <div class="entity-card-stat">${stats.done}<span> / ${stats.total}</span></div>${blockedDot}
+    </div>
+    <div class="entity-card-sub">${pct}% complete</div>
+    <div class="entity-mini-bar"><div class="entity-mini-fill" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function renderEntitySummary() {
+  const body = document.getElementById('entity-summary-body');
+  if (!body) return;
+  let html = '';
+  if (entityRollup === 'clients') {
+    html = `<div class="entity-cards-row">${entityCardHtml('Clients', getEntityStats('Clients'), true)}</div>`;
+  } else {
+    const groupList  = ENTITY_GROUPS[entityRollup];
+    const groupLabel = entityRollup === 'operating' ? 'Operating total' : 'Ranch total';
+    html = `<div class="entity-cards-row">`;
+    html += entityCardHtml(groupLabel, getGroupStats(groupList), true);
+    groupList.forEach(ent => { html += entityCardHtml(ent, getEntityStats(ent), false); });
+    html += `</div>`;
+  }
+  body.innerHTML = html;
+  document.getElementById('etog-operating').classList.toggle('active', entityRollup === 'operating');
+  document.getElementById('etog-ranch').classList.toggle('active', entityRollup === 'ranch');
+  document.getElementById('etog-clients').classList.toggle('active', entityRollup === 'clients');
+}
+
+function setEntityRollup(type) {
+  entityRollup = type;
+  localStorage.setItem('cmc_entity_rollup', type);
+  renderEntitySummary();
+}
+
+// ── Owner toggle ──────────────────────────────────────────────────────────────
+function toggleOwnerView() {
+  ownerViewMode = ownerViewMode === 'role' ? 'name' : 'role';
+  localStorage.setItem('cmc_owner_view', ownerViewMode);
+  updateOwnerToggleBtn();
+  refreshFilterDropdowns();
+  renderAll();
+}
+
+function updateOwnerToggleBtn() {
+  const btn = document.getElementById('owner-view-btn');
+  if (!btn) return;
+  if (ownerViewMode === 'name') { btn.textContent = 'By role'; btn.classList.add('active'); }
+  else { btn.textContent = 'By name'; btn.classList.remove('active'); }
+}
+
+// ── Collapse ──────────────────────────────────────────────────────────────────
+function toggleCollapse(groupMode, key) {
+  const ck = groupMode + ':' + key;
+  collapsedGroups[ck] = !collapsedGroups[ck];
+  localStorage.setItem('cmc_collapsed', JSON.stringify(collapsedGroups));
+  renderAll();
+}
+
+// ── Month nav ─────────────────────────────────────────────────────────────────
+function initMonth() {
+  const stored = localStorage.getItem('cmc_close_month_offset');
+  monthOffset = stored ? parseInt(stored) : 0;
+  updateMonthDisplay();
+}
+
+function changeMonth(dir) {
+  monthOffset += dir;
+  localStorage.setItem('cmc_close_month_offset', monthOffset);
+  updateMonthDisplay();
+  loadMonthData();
+}
+
+function updateMonthDisplay() {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + monthOffset);
+  document.getElementById('month-display').textContent = d.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+  currentMonth = d.toISOString().slice(0,7);
+}
+
+function monthLabelFromOffset(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  return d.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+}
+
+function monthYMFromOffset(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  return d.toISOString().slice(0,7);
+}
+
+// ── Copy modal ────────────────────────────────────────────────────────────────
+function openCopyModal() {
+  _copyMonthOffset = monthOffset - 1;
+  document.getElementById('copy-dest-label').textContent = monthLabelFromOffset(monthOffset);
+  updateCopyMonthDisplay();
+  document.getElementById('copy-modal').classList.add('open');
+}
+
+function closeCopyModal() {
+  document.getElementById('copy-modal').classList.remove('open');
+}
+
+function changeCopySource(dir) {
+  _copyMonthOffset += dir;
+  updateCopyMonthDisplay();
+}
+
+function updateCopyMonthDisplay() {
+  document.getElementById('copy-src-label').textContent = monthLabelFromOffset(_copyMonthOffset);
+}
+
+async function executeCopy() {
+  const srcYM = monthYMFromOffset(_copyMonthOffset);
+  if (srcYM === currentMonth) { alert("Source month can't be the same as the current month."); return; }
+  const copyCustom = document.getElementById('copy-custom-tasks').checked;
+  const copyDues   = document.getElementById('copy-due-dates').checked;
+  if (!copyCustom && !copyDues) { closeCopyModal(); return; }
+  closeCopyModal();
+  setSyncStatus('saving');
+  try {
+    const formula = encodeURIComponent(`{Month}="${srcYM}"`);
+    let records = [], offset = '';
+    do {
+      const url = `?filterByFormula=${formula}&pageSize=100${offset ? '&offset='+offset : ''}`;
+      const res = await atFetch('GET', url);
+      if (!res) break;
+      records = records.concat(res.records || []);
+      offset = res.offset || '';
+    } while (offset);
+    for (const r of records) {
+      const f = r.fields;
+      const id = f.TaskId;
+      if (!id) continue;
+      if (copyCustom && id >= 1000 && !airtableRecords[id]) {
+        if (!TASK_DEFS.find(d => d.id === id)) {
+          TASK_DEFS.push({ id, section:f.Section, task:f.Task, entity:f.Entity, cadence:f.Cadence, owner:f.Owner, flag:f.Flag||'' });
+        }
+        taskData[id] = { status:'Not started', note:'', due:'', checked:false, updatedBy:'',
+          neededFor: f.NeededFor ? f.NeededFor.split(',').map(s=>s.trim()).filter(Boolean) : [] };
+        await saveTaskToAirtable(id);
+      }
+      if (copyDues && id < 1000 && f.DueDate) {
+        if (!taskData[id]) taskData[id] = { status:'Not started', note:'', due:'', checked:false, updatedBy:'', neededFor:[] };
+        if (!taskData[id].due) {
+          taskData[id].due = f.DueDate;
+          await saveTaskToAirtable(id);
+        }
+      }
+      if (f.NeededFor && f.NeededFor.trim()) {
+        const tags = f.NeededFor.split(',').map(s=>s.trim()).filter(Boolean);
+        if (tags.length && id < 1000) {
+          if (!taskData[id]) taskData[id] = { status:'Not started', note:'', due:'', checked:false, updatedBy:'', neededFor:[] };
+          if (!(taskData[id].neededFor||[]).length) {
+            taskData[id].neededFor = tags;
+            await saveTaskToAirtable(id);
+          }
+        }
+      }
+    }
+    setSyncStatus('saved');
+  } catch(e) { setSyncStatus('error'); }
+  renderAll();
+}
+
+// ── Shared config (CloseConfig table) ────────────────────────────────────────
+function saveSharedConfig(key, value) {
+  localStorage.setItem('cmc_' + key, JSON.stringify(value));
+  saveConfigToAirtable(key, value);
+}
+
+async function saveConfigToAirtable(key, value) {
+  const base  = localStorage.getItem('cmc_at_base')  || AT_BASE;
+  const token = localStorage.getItem('cmc_at_token') || AT_TOKEN;
+  if (!base || !token) return;
+  const fields = { Key: key, Value: JSON.stringify(value) };
+  const url    = `https://api.airtable.com/v0/${base}/${encodeURIComponent(AT_CONFIG_TABLE)}`;
+  try {
+    if (configRecordIds[key]) {
+      await fetch(url + '/' + configRecordIds[key], {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields })
+      });
+    } else {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields })
+      });
+      if (r.ok) { const d = await r.json(); configRecordIds[key] = d.id; }
+    }
+  } catch(_) {}
+}
+
+async function loadConfig() {
+  const base  = localStorage.getItem('cmc_at_base')  || AT_BASE;
+  const token = localStorage.getItem('cmc_at_token') || AT_TOKEN;
+  if (!base || !token) return;
+  try {
+    let records = [], offset = '';
+    do {
+      const url = `https://api.airtable.com/v0/${base}/${encodeURIComponent(AT_CONFIG_TABLE)}?pageSize=100${offset ? '&offset='+offset : ''}`;
+      const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!r.ok) return;
+      const data = await r.json();
+      records = records.concat(data.records || []);
+      offset = data.offset || '';
+    } while (offset);
+
+    records.forEach(rec => {
+      const key = rec.fields.Key;
+      const raw = rec.fields.Value;
+      if (!key || raw === undefined) return;
+      configRecordIds[key] = rec.id;
+      try {
+        const val = JSON.parse(raw);
+        switch (key) {
+          case 'sections':     SECTIONS      = val; break;
+          case 'entities':     ENTITIES      = val; break;
+          case 'cadences':     CADENCES      = val; break;
+          case 'owners':       OWNERS        = val; break;
+          case 'statuses':     STATUSES      = val; break;
+          case 'owner_names':  ownerNameMap  = val; break;
+          case 'color_maps':
+            colorMaps = val;
+            if (!colorMaps.owners)   colorMaps.owners   = {};
+            if (!colorMaps.statuses) colorMaps.statuses = {};
+            if (!colorMaps.entities) colorMaps.entities = {};
+            if (!colorMaps.cadences) colorMaps.cadences = {};
+            break;
+          case 'needed_for':   neededForList  = val; break;
+          case 'deleted_ids':  deletedTaskIds = new Set(val); break;
+          case 'group_orders': groupOrders    = val; break;
+          case 'task_orders':  taskOrders     = val; break;
+        }
+      } catch(_) {}
+    });
+  } catch(_) {}
+}
+
+// ── Sync indicator ────────────────────────────────────────────────────────────
+function setSyncStatus(s, errMsg) {
+  const dot    = document.getElementById('sync-dot');
+  const banner = document.getElementById('sync-err-banner');
+  const msgEl  = document.getElementById('sync-err-msg');
+  dot.className = 'saving-dot ' + s;
+  dot.title = s === 'saving' ? 'Saving...' : s === 'saved' ? 'All changes saved' : s === 'error' ? 'Sync error — see banner' : 'Idle';
+  if (banner) banner.style.display = s === 'error' ? 'flex' : 'none';
+  if (msgEl && errMsg) msgEl.textContent = errMsg;
+}
+
+function openReconnect() {
+  const base  = localStorage.getItem('cmc_at_base')  || '';
+  const token = localStorage.getItem('cmc_at_token') || '';
+  const table = localStorage.getItem('cmc_at_table') || 'CloseTracker';
+  document.getElementById('cfg-base').value  = base;
+  document.getElementById('cfg-token').value = token;
+  document.getElementById('cfg-table').value = table;
+  document.getElementById('app').style.display          = 'none';
+  document.getElementById('setup-screen').style.display = 'block';
+}
+
+// ── Airtable ──────────────────────────────────────────────────────────────────
+async function atFetch(method, path, body) {
+  const base  = localStorage.getItem('cmc_at_base')  || AT_BASE;
+  const token = localStorage.getItem('cmc_at_token') || AT_TOKEN;
+  const table = localStorage.getItem('cmc_at_table') || AT_TABLE;
+  if (!base || !token) return null;
+  const url   = `https://api.airtable.com/v0/${base}/${encodeURIComponent(table)}${path}`;
+  const opts2 = {method, headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}};
+  if (body) opts2.body = JSON.stringify(body);
+  const r = await fetch(url, opts2);
+  if (!r.ok) {
+    let msg = `HTTP ${r.status}`;
+    try { const e = await r.json(); msg = e.error?.message || e.error?.type || msg; } catch(_) {}
+    const detail = `${msg} — table: ${table}, base: ${base.slice(0,14)}…`;
+    setSyncStatus('error', detail);
+    throw new Error(detail);
+  }
+  return r.json();
+}
+
+async function loadMonthData() {
+  taskData = {};
+  airtableRecords = {};
+  TASK_DEFS.forEach(t => { taskData[t.id] = {status:'Not started', note:'', due:'', checked:false, updatedBy:'', neededFor:[]}; });
+  setSyncStatus('saving');
+  try {
+    const formula = encodeURIComponent(`{Month}="${currentMonth}"`);
+    let records = [], offset = '';
+    do {
+      const url = `?filterByFormula=${formula}&pageSize=100${offset ? '&offset='+offset : ''}`;
+      const res = await atFetch('GET', url);
+      if (!res) break;
+      records = records.concat(res.records || []);
+      offset = res.offset || '';
+    } while (offset);
+    records.forEach(r => {
+      const f = r.fields;
+      const id = f.TaskId;
+      if (!id) return;
+      airtableRecords[id] = r.id;
+      taskData[id] = { status: f.Status || 'Not started', note: f.Note || '', due: f.DueDate || '', checked: f.Checked || false, updatedBy: f.UpdatedBy || '', neededFor: f.NeededFor ? f.NeededFor.split(',').map(s=>s.trim()).filter(Boolean) : [] };
+      if (id >= 1000) {
+        taskData[id].section = f.Section; taskData[id].task = f.Task;
+        taskData[id].entity  = f.Entity;  taskData[id].cadence = f.Cadence;
+        taskData[id].owner   = f.Owner;   taskData[id].flag = f.Flag || '';
+      } else {
+        const def = TASK_DEFS.find(t => t.id === id);
+        if (def) {
+          if (f.Task)    def.task    = f.Task;
+          if (f.Section) def.section = f.Section;
+          if (f.Entity)  def.entity  = f.Entity;
+          if (f.Cadence) def.cadence = f.Cadence;
+          if (f.Owner)   def.owner   = f.Owner;
+          if (f.Flag !== undefined) def.flag = f.Flag || '';
+        }
+      }
+      if (id >= nextCustomId) nextCustomId = id + 1;
+    });
+    const customIds = records.filter(r => r.fields.TaskId >= 1000);
+    customIds.forEach(r => {
+      const f = r.fields;
+      if (!TASK_DEFS.find(d => d.id === f.TaskId) && !deletedTaskIds.has(f.TaskId))
+        TASK_DEFS.push({ id:f.TaskId, section:f.Section, task:f.Task, entity:f.Entity, cadence:f.Cadence, owner:f.Owner, flag:f.Flag||'' });
+    });
+    setSyncStatus('saved');
+  } catch(e) { setSyncStatus('error'); }
+  renderAll();
+}
+
+function queueSave(taskId) {
+  saveQueue[taskId] = true;
+  setSyncStatus('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSaves, 800);
+}
+
+async function flushSaves() {
+  const ids = Object.keys(saveQueue);
+  saveQueue = {};
+  let failed = false;
+  for (const id of ids) {
+    try { await saveTaskToAirtable(parseInt(id)); }
+    catch(e) { failed = true; }
+  }
+  if (!failed) setSyncStatus('saved');
+}
+
+async function saveTaskToAirtable(taskId) {
+  const def = TASK_DEFS.find(t => t.id === taskId) || {};
+  const d   = taskData[taskId] || {};
+  const user = document.getElementById('user-sel').value;
+  const fields = {
+    Month:     currentMonth,     TaskId:  taskId,
+    Section:   def.section  || d.section  || '',
+    Task:      def.task     || d.task     || '',
+    Entity:    def.entity   || d.entity   || '',
+    Cadence:   def.cadence  || d.cadence  || '',
+    Owner:     def.owner    || d.owner    || '',
+    Flag:      def.flag !== undefined ? def.flag : (d.flag || ''),
+    Status:    d.status     || 'Not started',
+    Note:      d.note       || '',
+    DueDate:   d.due        || '',
+    Checked:   d.checked    || false,
+    UpdatedBy: user !== 'all' ? user : (d.updatedBy || ''),
+    NeededFor: (d.neededFor || []).join(',')
+  };
+  if (airtableRecords[taskId]) {
+    await atFetch('PATCH', '/'+airtableRecords[taskId], {fields});
+  } else {
+    const res = await atFetch('POST', '', {fields});
+    if (res && res.id) airtableRecords[taskId] = res.id;
+  }
+}
+
+async function deleteTaskFromAirtable(taskId) {
+  if (airtableRecords[taskId]) {
+    await atFetch('DELETE', '/'+airtableRecords[taskId]);
+    delete airtableRecords[taskId];
+  }
+}
+
+// ── Filters / render ──────────────────────────────────────────────────────────
+function applyFilters() { renderAll(); }
+
+function getFilteredTasks() {
+  const owner   = document.getElementById('user-sel').value;
+  const cadence = document.getElementById('f-cadence').value;
+  const status  = document.getElementById('f-status').value;
+  const entity  = document.getElementById('f-entity').value;
+  const search  = document.getElementById('f-search').value.toLowerCase();
+  return activeTasks().filter(t => {
+    if (owner !== 'all' && t.owner !== owner) return false;
+    if (cadence !== 'all' && t.cadence !== cadence) return false;
+    const d = taskData[t.id] || {};
+    if (status !== 'all' && d.status !== status) return false;
+    if (entity !== 'all') {
+      const showAll = entity !== 'Clients';
+      if (t.entity !== entity && !(showAll && t.entity === 'All')) return false;
+    }
+    if (search && !t.task.toLowerCase().includes(search) && !(t.entity||'').toLowerCase().includes(search)) return false;
+    return true;
+  });
+}
+
+function renderAll() {
+  updateStats();
+  renderEntitySummary();
+  const group = document.getElementById('f-group').value;
+  const tasks = getFilteredTasks();
+  const container = document.getElementById('task-list');
+  container.innerHTML = '';
+
+  if (tasks.length === 0) {
+    container.innerHTML = '<div class="empty-state">No tasks match the current filters.</div>';
+    return;
+  }
+
+  const groups = {};
+  tasks.forEach(t => {
+    const key = group === 'section' ? t.section : group === 'entity' ? t.entity : t.owner;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  const allKeys = Object.keys(groups);
+  const saved   = groupOrders[group] || [];
+  const orderedKeys = [
+    ...saved.filter(k => allKeys.includes(k)),
+    ...allKeys.filter(k => !saved.includes(k)).sort()
+  ];
+  if (JSON.stringify(orderedKeys) !== JSON.stringify(saved)) {
+    groupOrders[group] = orderedKeys;
+    saveSharedConfig('group_orders', groupOrders);
+  }
+
+  orderedKeys.forEach(gKey => {
+    const gTasks    = groups[gKey];
+    const done      = gTasks.filter(t => (taskData[t.id]||{}).status === 'Done').length;
+    const pct       = gTasks.length ? Math.round(done / gTasks.length * 100) : 0;
+    const displayKey = group === 'owner' ? displayOwner(gKey) : gKey;
+    const safeId    = gKey.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    const collapseKey = group + ':' + gKey;
+    const isCollapsed = !!collapsedGroups[collapseKey];
+    const sectionKey  = group === 'section' ? gKey : null;
+
+    const block = document.createElement('div');
+    block.className = 'section-block';
+    block.draggable = false;
+    block.dataset.key = gKey;
+    block.innerHTML = `
+      <div class="section-head">
+        <button class="collapse-btn${isCollapsed ? ' is-collapsed' : ''}"
+                onclick="toggleCollapse('${escHtml(group)}','${escHtml(gKey)}')"
+                title="${isCollapsed ? 'Expand' : 'Collapse'}">&#9660;</button>
+        <span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span>
+        <div class="section-name">${escHtml(displayKey)}</div>
+        <div class="section-mini-bar-wrap">
+          <div class="section-mini-bar"><div class="section-mini-fill" style="width:${pct}%"></div></div>
+        </div>
+        <div class="section-prog">${done} / ${gTasks.length}</div>
+      </div>
+      <div class="section-body${isCollapsed ? ' collapsed' : ''}">
+        <table class="tasks">
+          <thead><tr>
+            ${sectionKey ? '<th class="col-drag"></th>' : ''}
+            <th class="col-check"></th>
+            <th class="col-task">Task</th>
+            <th class="col-owner">Owner</th>
+            <th class="col-due">Due date</th>
+            <th class="col-status">Status</th>
+            <th class="col-note">Note</th>
+            <th class="col-actions"></th>
+          </tr></thead>
+          <tbody id="tbody-${safeId}">${renderRows(gTasks, sectionKey)}</tbody>
+        </table>
+      </div>`;
+    block.addEventListener('dragstart',  onBlockDragStart);
+    block.addEventListener('dragover',   onBlockDragOver);
+    block.addEventListener('dragleave',  onBlockDragLeave);
+    block.addEventListener('drop',       onBlockDrop);
+    block.addEventListener('dragend',    onBlockDragEnd);
+    const _dh = block.querySelector('.drag-handle');
+    if (_dh) {
+      _dh.addEventListener('mousedown', () => { block.draggable = true; });
+    }
+    block.addEventListener('dragend', () => { block.draggable = false; });
+    container.appendChild(block);
+  });
+  renderNeededForSummary();
+}
+
+function renderRows(tasks, sectionKey) {
+  let orderedTasks = tasks;
+  if (sectionKey && taskOrders[sectionKey] && taskOrders[sectionKey].length) {
+    const order = taskOrders[sectionKey];
+    orderedTasks = [
+      ...order.map(id => tasks.find(t => t.id === id)).filter(Boolean),
+      ...tasks.filter(t => !order.includes(t.id))
+    ];
+  }
+  return orderedTasks.map(t => {
+    const d = taskData[t.id] || {status:'Not started', note:'', due:'', checked:false};
+    const statusClass = d.status === 'Done' ? 's-done' : d.status === 'In progress' ? 's-ip' : d.status === 'Blocked' ? 's-blocked' : '';
+    const statusStyle = getColorStyle('statuses', d.status);
+    const rowClass    = d.status === 'Done' ? 'row-done' : d.status === 'Blocked' ? 'row-blocked' : d.status === 'In progress' ? 'row-ip' : '';
+    const ownerStyle  = getColorStyle('owners', t.owner);
+    const entityStyle = getColorStyle('entities', t.entity);
+    const cadenceStyle = getColorStyle('cadences', t.cadence);
+    const dueClass    = d.due && new Date(d.due) < new Date() && d.status !== 'Done' ? 'due-past' : '';
+    const flagVal     = (t.flag || '').replace(/"/g, '&quot;');
+    const nfTags      = (d.neededFor||[]).map(nf =>
+      `<span class="nf-tag">${escHtml(nf)}<button onclick="removeNeededFor(${t.id},'${escHtml(nf)}')" title="Remove">&times;</button></span>`
+    ).join('');
+    const nfAvail     = neededForList.filter(v => !(d.neededFor||[]).includes(v));
+    const nfSel       = neededForList.length > 0
+      ? `<select class="nf-sel" onchange="addNeededFor(${t.id},this)" title="Tag as needed for…"><option value="">+ needed for\u2026</option>${nfAvail.map(v=>`<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('')}</select>`
+      : '';
+    const dragCell    = sectionKey
+      ? `<td class="col-drag"><span class="row-drag-handle" title="Drag to reorder">&#8942;&#8942;</span></td>`
+      : '';
+    return `<tr class="${rowClass}" id="row-${t.id}" data-id="${t.id}" data-section="${escHtml(sectionKey || '')}">
+      ${dragCell}
+      <td class="col-check check-wrap"><input type="checkbox" ${d.checked?'checked':''} onchange="toggleCheck(${t.id},this.checked)"></td>
+      <td class="col-task">
+        <div class="task-name-line">
+          <span class="task-name-text">${escHtml(t.task)}</span>
+          <input class="flag-inp" type="text" value="${flagVal}" placeholder="add flag…" onchange="updateFlag(${t.id},this.value)" title="Flag / tag" />
+        </div>
+        <div class="task-meta-line">
+          <span class="entity-chip" style="${entityStyle}">${escHtml(t.entity)}</span>
+          <span class="cadence-chip" style="${cadenceStyle}">${escHtml(t.cadence)}</span>
+        </div>
+        <div class="task-nf-line">${nfTags}${nfSel}</div>
+      </td>
+      <td class="col-owner"><span class="badge" style="${ownerStyle}">${escHtml(displayOwner(t.owner))}</span></td>
+      <td class="col-due"><input type="date" class="due-inp ${dueClass}" value="${d.due||''}" onchange="updateDue(${t.id},this.value)" /></td>
+      <td class="col-status">
+        <select class="status-sel ${statusClass}" style="${statusStyle}" onchange="updateStatus(${t.id},this.value,this)">
+          ${opts(STATUSES, d.status)}
+        </select>
+      </td>
+      <td class="col-note"><input class="note-inp" type="text" value="${(d.note||'').replace(/"/g,'&quot;')}" placeholder="Add note…" onchange="updateNote(${t.id},this.value)" /></td>
+      <td class="col-actions">
+        <button class="btn-edit" onclick="openEditModal(${t.id})" title="Edit task">&#9998;</button>
+        <button class="btn-del"  onclick="deleteTask(${t.id})"   title="Remove task">&times;</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Needed-for actions ───────────────────────────────────────────────────────
+function addNeededFor(id, sel) {
+  const val = sel.value; if (!val) return; sel.value = '';
+  if (!taskData[id]) taskData[id] = {status:'Not started',note:'',due:'',checked:false,updatedBy:'',neededFor:[]};
+  if (!(taskData[id].neededFor||[]).includes(val)) {
+    taskData[id].neededFor = [...(taskData[id].neededFor||[]), val];
+    queueSave(id); renderAll();
+  }
+}
+
+function removeNeededFor(id, item) {
+  if (!taskData[id]) return;
+  taskData[id].neededFor = (taskData[id].neededFor||[]).filter(v => v !== item);
+  queueSave(id); renderAll();
+}
+
+function toggleNfExpand(nfItem) {
+  if (expandedNfItems.has(nfItem)) expandedNfItems.delete(nfItem);
+  else expandedNfItems.add(nfItem);
+  renderNeededForSummary();
+}
+
+function toggleNfEntity(nfItem, entity) {
+  const k = nfItem + ':' + entity;
+  if (expandedNfEntities.has(k)) expandedNfEntities.delete(k);
+  else expandedNfEntities.add(k);
+  renderNeededForSummary();
+}
+
+function renderNeededForSummary() {
+  const panel = document.getElementById('needed-summary');
+  if (!panel) return;
+  if (!neededForList.length) {
+    panel.innerHTML = '<div class="nf-panel-empty">Define \u201cNeeded for\u201d items in \u2699 Settings to track completion by deliverable.</div>';
+    return;
+  }
+  const allEntityNames = [...new Set(activeTasks().map(t => t.entity).filter(e => e !== 'All'))];
+  let html = '<div class="nf-panel-title">Needed for</div>';
+  for (const nfItem of neededForList) {
+    const tagged   = activeTasks().filter(t => (taskData[t.id]?.neededFor||[]).includes(nfItem));
+    const totalAll = tagged.length;
+    const doneAll  = tagged.filter(t => (taskData[t.id]||{}).status === 'Done').length;
+    const pctAll   = totalAll ? Math.round(doneAll/totalAll*100) : 0;
+    const isExpanded = expandedNfItems.has(nfItem);
+    const entRows  = allEntityNames.map(ent => {
+      const entTasks = activeTasks().filter(t =>
+        (taskData[t.id]?.neededFor||[]).includes(nfItem) &&
+        (t.entity === ent || t.entity === 'All')
+      );
+      return { ent, tasks: entTasks };
+    }).filter(r => r.tasks.length > 0);
+
+    html += `<div class="nf-item-card">
+      <div class="nf-item-head" onclick="toggleNfExpand('${escHtml(nfItem)}')">
+        <span class="nf-expand-icon">${isExpanded ? '&#9660;' : '&#9658;'}</span>
+        <span class="nf-item-label">${escHtml(nfItem)}</span>
+        <span class="nf-item-tally">${doneAll}/${totalAll}</span>
+      </div>
+      <div class="nf-item-progbar"><div class="nf-item-progfill" style="width:${pctAll}%"></div></div>`;
+    if (isExpanded) {
+      entRows.forEach(({ent, tasks}) => {
+        const done = tasks.filter(t => (taskData[t.id]||{}).status === 'Done').length;
+        const pct  = tasks.length ? Math.round(done/tasks.length*100) : 0;
+        const entKey = nfItem + ':' + ent;
+        const isEntExp = expandedNfEntities.has(entKey);
+        html += `<div class="nf-ent-row">
+          <div class="nf-ent-head" onclick="toggleNfEntity('${escHtml(nfItem)}','${escHtml(ent)}')">
+            <span class="nf-ent-expand">${isEntExp ? '&#9660;' : '&#9658;'}</span>
+            <span class="nf-ent-name">${escHtml(ent)}</span>
+            <span class="nf-ent-tally">${done}/${tasks.length}</span>
+          </div>
+          <div class="nf-ent-bar"><div class="nf-ent-fill" style="width:${pct}%"></div></div>`;
+        if (isEntExp) {
+          tasks.forEach(t => {
+            const s = (taskData[t.id]||{}).status || 'Not started';
+            const dotColor = s==='Done' ? 'var(--green)' : s==='Blocked' ? 'var(--red)' : s==='In progress' ? 'var(--amber)' : '#CBD5E1';
+            html += `<div class="nf-task-item">
+              <span class="nf-task-dot" style="background:${dotColor}"></span>
+              <span class="nf-task-name" title="${escHtml(t.task)}">${escHtml(t.task)}</span>
+            </div>`;
+          });
+        }
+        html += `</div>`;
+      });
+    }
+    html += `</div>`;
+  }
+  panel.innerHTML = html;
+}
+
+// ── Block drag handlers ───────────────────────────────────────────────────────
+function onBlockDragStart(e) {
+  if (_rowDragSrcId !== null) return;
+  if (e.target.closest('tr[data-id]')) return;
+  _dragSrcKey = this.dataset.key;
+  _dragGroup  = document.getElementById('f-group').value;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', _dragSrcKey);
+}
+function onBlockDragOver(e) {
+  if (_rowDragSrcId !== null) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  this.classList.add('drag-over');
+}
+function onBlockDragLeave() { this.classList.remove('drag-over'); }
+function onBlockDrop(e) {
+  if (_rowDragSrcId !== null) return;
+  e.preventDefault(); e.stopPropagation();
+  const targetKey = this.dataset.key;
+  if (_dragSrcKey && _dragSrcKey !== targetKey && _dragGroup) {
+    const order = groupOrders[_dragGroup] || [];
+    const si = order.indexOf(_dragSrcKey), ti = order.indexOf(targetKey);
+    if (si > -1 && ti > -1) {
+      order.splice(si, 1); order.splice(ti, 0, _dragSrcKey);
+      groupOrders[_dragGroup] = order;
+      saveSharedConfig('group_orders', groupOrders);
+      renderAll();
+    }
+  }
+  this.classList.remove('drag-over');
+}
+function onBlockDragEnd() {
+  this.classList.remove('dragging');
+  document.querySelectorAll('.section-block').forEach(b => b.classList.remove('drag-over'));
+}
+
+// ── Row drag (task priority) ──────────────────────────────────────────────────
+function initRowDrag() {
+  const tl = document.getElementById('task-list');
+
+  tl.addEventListener('mousedown', e => {
+    const handle = e.target.closest('.row-drag-handle');
+    if (handle) {
+      const tr = handle.closest('tr[data-id]');
+      if (tr) {
+        tr.draggable = true;
+        tr.addEventListener('dragend', () => { tr.draggable = false; }, { once: true });
+      }
+    }
+  });
+
+  tl.addEventListener('dragstart', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr || !tr.draggable) return;
+    _rowDragSrcId   = parseInt(tr.dataset.id);
+    _rowDragSection = tr.dataset.section;
+    tr.classList.add('row-dragging');
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(_rowDragSrcId));
+  });
+
+  tl.addEventListener('dragover', e => {
+    if (_rowDragSrcId === null) return;
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    e.preventDefault(); e.stopPropagation();
+    tl.querySelectorAll('tr.row-drag-over').forEach(r => r.classList.remove('row-drag-over'));
+    tr.classList.add('row-drag-over');
+  });
+
+  tl.addEventListener('dragleave', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) tr.classList.remove('row-drag-over');
+  });
+
+  tl.addEventListener('drop', e => {
+    if (_rowDragSrcId === null) return;
+    const tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    e.preventDefault(); e.stopPropagation();
+    const targetId  = parseInt(tr.dataset.id);
+    const section   = _rowDragSection;
+    if (_rowDragSrcId !== targetId && section) {
+      const sectionTasks = TASK_DEFS.filter(t => t.section === section);
+      let order = taskOrders[section] ? [...taskOrders[section]] : sectionTasks.map(t => t.id);
+      sectionTasks.forEach(t => { if (!order.includes(t.id)) order.push(t.id); });
+      const si = order.indexOf(_rowDragSrcId), ti = order.indexOf(targetId);
+      if (si > -1 && ti > -1) {
+        order.splice(si, 1); order.splice(ti, 0, _rowDragSrcId);
+        taskOrders[section] = order;
+        saveSharedConfig('task_orders', taskOrders);
+        renderAll();
+      }
+    }
+    tr.classList.remove('row-drag-over');
+    _rowDragSrcId = null; _rowDragSection = null;
+  });
+
+  tl.addEventListener('dragend', () => {
+    tl.querySelectorAll('tr.row-dragging').forEach(r => r.classList.remove('row-dragging'));
+    tl.querySelectorAll('tr.row-drag-over').forEach(r => r.classList.remove('row-drag-over'));
+    _rowDragSrcId = null; _rowDragSection = null;
+  });
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const tasks = activeTasks();
+  const total = tasks.length;
+  let open=0, ip=0, done=0, blocked=0;
+  tasks.forEach(t => {
+    const s = (taskData[t.id]||{}).status || 'Not started';
+    if (s==='Done') done++; else if (s==='In progress') ip++; else if (s==='Blocked') blocked++; else open++;
+  });
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('s-total').textContent   = total;
+  document.getElementById('s-open').textContent    = open;
+  document.getElementById('s-ip').textContent      = ip;
+  document.getElementById('s-done').textContent    = done;
+  document.getElementById('s-blocked').textContent = blocked;
+  document.getElementById('s-pct').textContent     = pct + '%';
+  document.getElementById('s-prog').style.width    = pct + '%';
+}
+
+// ── Task actions ──────────────────────────────────────────────────────────────
+function toggleCheck(id, val) {
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  taskData[id].checked = val;
+  if (val && taskData[id].status !== 'Done') taskData[id].status = 'Done';
+  queueSave(id);
+  renderAll();
+}
+
+function updateStatus(id, val, sel) {
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  taskData[id].status = val;
+  if (val === 'Done') taskData[id].checked = true;
+  const cls = val === 'Done' ? 's-done' : val === 'In progress' ? 's-ip' : val === 'Blocked' ? 's-blocked' : '';
+  sel.className = 'status-sel ' + cls;
+  sel.setAttribute('style', getColorStyle('statuses', val));
+  queueSave(id);
+  renderAll();
+}
+
+function updateNote(id, val) {
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  taskData[id].note = val;
+  queueSave(id);
+}
+
+function updateDue(id, val) {
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  taskData[id].due = val;
+  queueSave(id);
+}
+
+function updateFlag(id, val) {
+  const def = TASK_DEFS.find(t => t.id === id);
+  if (def) def.flag = val;
+  queueSave(id);
+}
+
+async function deleteTask(id) {
+  if (!confirm('Remove this task?')) return;
+  deletedTaskIds.add(id);
+  saveSharedConfig('deleted_ids', [...deletedTaskIds]);
+  const idx = TASK_DEFS.findIndex(t => t.id === id);
+  if (idx > -1) TASK_DEFS.splice(idx, 1);
+  delete taskData[id];
+  await deleteTaskFromAirtable(id);
+  renderAll();
+}
+
+// ── Add / Edit modal ──────────────────────────────────────────────────────────
+function populateModalDropdowns(def) {
+  document.getElementById('m-section').innerHTML = opts(SECTIONS, def ? def.section : SECTIONS[0] || '');
+  document.getElementById('m-entity').innerHTML  = opts(ENTITIES, def ? def.entity  : '');
+  document.getElementById('m-cadence').innerHTML = opts(CADENCES, def ? def.cadence : '');
+  document.getElementById('m-owner').innerHTML   = opts(OWNERS,   def ? def.owner   : '');
+}
+
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add task';
+  document.getElementById('m-task').value = '';
+  document.getElementById('m-flag').value = '';
+  document.getElementById('m-due').value  = '';
+  populateModalDropdowns(null);
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const def = TASK_DEFS.find(t => t.id === id);
+  if (!def) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit task';
+  document.getElementById('m-task').value = def.task;
+  document.getElementById('m-flag').value = def.flag || '';
+  document.getElementById('m-due').value  = (taskData[id] || {}).due || '';
+  populateModalDropdowns(def);
+  document.getElementById('add-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  editingId = null;
+}
+
+async function saveTask() {
+  const task = document.getElementById('m-task').value.trim();
+  if (!task) return;
+  const section = document.getElementById('m-section').value;
+  const entity  = document.getElementById('m-entity').value;
+  const cadence = document.getElementById('m-cadence').value;
+  const owner   = document.getElementById('m-owner').value;
+  const flag    = document.getElementById('m-flag').value.trim();
+  const due     = document.getElementById('m-due').value;
+  if (editingId !== null) {
+    const def = TASK_DEFS.find(t => t.id === editingId);
+    if (def) { def.task = task; def.section = section; def.entity = entity; def.cadence = cadence; def.owner = owner; def.flag = flag; }
+    if (!taskData[editingId]) taskData[editingId] = {status:'Not started', note:'', due:'', checked:false, updatedBy:''};
+    taskData[editingId].due = due;
+    setSyncStatus('saving');
+    await saveTaskToAirtable(editingId);
+    setSyncStatus('saved');
+    closeModal(); renderAll(); return;
+  }
+  const newTask = { id: nextCustomId++, section, task, entity, cadence, owner, flag };
+  TASK_DEFS.push(newTask);
+  taskData[newTask.id] = { status:'Not started', note:'', due, checked:false, updatedBy:'' };
+  setSyncStatus('saving');
+  await saveTaskToAirtable(newTask.id);
+  setSyncStatus('saved');
+  closeModal(); renderAll();
+}
+
+// ── Settings modal ────────────────────────────────────────────────────────────
+let _tmpSections, _tmpEntities, _tmpCadences, _tmpOwners, _tmpStatuses, _tmpOwnerNames, _tmpColorMaps, _tmpNeededForList;
+
+function openSettings() {
+  _tmpSections   = [...SECTIONS];
+  _tmpEntities   = [...ENTITIES];
+  _tmpCadences   = [...CADENCES];
+  _tmpOwners     = [...OWNERS];
+  _tmpStatuses   = [...STATUSES];
+  _tmpOwnerNames = {...ownerNameMap};
+  _tmpColorMaps  = {
+    owners:   {...(colorMaps.owners   || {})},
+    statuses: {...(colorMaps.statuses || {})},
+    entities: {...(colorMaps.entities || {})},
+    cadences: {...(colorMaps.cadences || {})}
+  };
+  _tmpNeededForList = [...neededForList];
+  renderSettingsChips();
+  const track = document.getElementById('dark-track');
+  if (track) track.classList.toggle('on', localStorage.getItem('cmc_close_dark') === '1');
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+function getSettingsTmp(key) {
+  if (key === 'sections')   return _tmpSections;
+  if (key === 'entities')   return _tmpEntities;
+  if (key === 'cadences')   return _tmpCadences;
+  if (key === 'owners')     return _tmpOwners;
+  if (key === 'neededfor')  return _tmpNeededForList;
+  return _tmpStatuses;
+}
+
+function renderSettingsChips() {
+  ['sections','entities','cadences','owners','statuses','neededfor'].forEach(key => {
+    const arr = getSettingsTmp(key);
+    document.getElementById('sm-list-'+key).innerHTML = arr.map((v,i) =>
+      `<span class="type-chip">${escHtml(v)}<button onclick="removeTypeItem('${key}',${i})" title="Remove">&times;</button></span>`
+    ).join('');
+  });
+  const nameEl = document.getElementById('sm-name-map');
+  if (nameEl) {
+    nameEl.innerHTML = _tmpOwners.filter(o => o !== 'All').map(role =>
+      `<div class="sm-name-row">
+        <span class="sm-name-role">${escHtml(role)}</span>
+        <span class="sm-name-arrow">→</span>
+        <input class="sm-name-input" type="text"
+               value="${escHtml(_tmpOwnerNames[role] || '')}"
+               placeholder="Enter name…"
+               oninput="updateTmpName('${escHtml(role)}', this.value)" />
+      </div>`
+    ).join('');
+  }
+  renderColorPickers();
+}
+
+function renderColorPickers() {
+  const el = document.getElementById('sm-color-body');
+  if (!el) return;
+  const cats = [
+    { key:'owners',   label:'Owners',   list:_tmpOwners },
+    { key:'statuses', label:'Statuses', list:_tmpStatuses },
+    { key:'entities', label:'Entities', list:_tmpEntities.filter(v => v !== 'All') },
+    { key:'cadences', label:'Cadences', list:_tmpCadences },
+  ];
+  el.innerHTML = cats.map(cat => `
+    <div class="sm-color-group">
+      <div class="sm-color-group-label">${escHtml(cat.label)}</div>
+      ${cat.list.map(val => {
+        const def = (DEFAULT_COLORS[cat.key] || {})[val] || {bg:'#F3F4F6', text:'#6B7280'};
+        const c   = (_tmpColorMaps[cat.key] || {})[val] || def;
+        return `<div class="sm-color-row">
+          <input type="color" class="sm-color-swatch" value="${c.bg}"
+                 title="Background" oninput="updateTmpColor('${cat.key}','${escHtml(val)}','bg',this.value)" />
+          <input type="color" class="sm-color-swatch" value="${c.text}"
+                 title="Text color" oninput="updateTmpColor('${cat.key}','${escHtml(val)}','text',this.value)" />
+          <span class="sm-color-label">${escHtml(val)}</span>
+          <span class="sm-color-preview badge" style="background:${c.bg};color:${c.text}">${escHtml(val)}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+}
+
+function updateTmpColor(cat, val, prop, hex) {
+  if (!_tmpColorMaps[cat]) _tmpColorMaps[cat] = {};
+  if (!_tmpColorMaps[cat][val]) {
+    const def = (DEFAULT_COLORS[cat] || {})[val] || {bg:'#F3F4F6', text:'#6B7280'};
+    _tmpColorMaps[cat][val] = {...def};
+  }
+  _tmpColorMaps[cat][val][prop] = hex;
+}
+
+function resetAllColors() {
+  _tmpColorMaps = { owners:{}, statuses:{}, entities:{}, cadences:{} };
+  renderColorPickers();
+}
+
+function updateTmpName(role, val) { _tmpOwnerNames[role] = val.trim(); }
+
+function removeTypeItem(key, idx) { getSettingsTmp(key).splice(idx, 1); renderSettingsChips(); }
+
+function addTypeItem(key) {
+  const input = document.getElementById('sm-input-'+key);
+  const val = input.value.trim();
+  if (!val) return;
+  const arr = getSettingsTmp(key);
+  if (!arr.includes(val)) arr.push(val);
+  input.value = '';
+  renderSettingsChips();
+}
+
+function saveSettings() {
+  SECTIONS     = [..._tmpSections];
+  ENTITIES     = [..._tmpEntities];
+  CADENCES     = [..._tmpCadences];
+  OWNERS       = [..._tmpOwners];
+  STATUSES     = [..._tmpStatuses];
+  ownerNameMap = {..._tmpOwnerNames};
+  colorMaps    = {
+    owners:   {...(_tmpColorMaps.owners   || {})},
+    statuses: {...(_tmpColorMaps.statuses || {})},
+    entities: {...(_tmpColorMaps.entities || {})},
+    cadences: {...(_tmpColorMaps.cadences || {})}
+  };
+  neededForList = [..._tmpNeededForList];
+  saveSharedConfig('sections',    SECTIONS);
+  saveSharedConfig('entities',    ENTITIES);
+  saveSharedConfig('cadences',    CADENCES);
+  saveSharedConfig('owners',      OWNERS);
+  saveSharedConfig('statuses',    STATUSES);
+  saveSharedConfig('owner_names', ownerNameMap);
+  saveSharedConfig('color_maps',  colorMaps);
+  saveSharedConfig('needed_for',  neededForList);
+  refreshFilterDropdowns();
+  renderAll();
+  closeSettings();
+}
+
+function refreshFilterDropdowns() {
+  const fc = document.getElementById('f-cadence');
+  const fcVal = fc.value;
+  fc.innerHTML = `<option value="all">All cadences</option>` +
+    CADENCES.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+  if ([...fc.options].some(o => o.value === fcVal)) fc.value = fcVal;
+
+  const fs = document.getElementById('f-status');
+  const fsVal = fs.value;
+  fs.innerHTML = `<option value="all">All statuses</option>` +
+    STATUSES.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+  if ([...fs.options].some(o => o.value === fsVal)) fs.value = fsVal;
+
+  const fu = document.getElementById('user-sel');
+  const fuVal = fu.value;
+  fu.innerHTML = `<option value="all">All team</option>` +
+    OWNERS.filter(o => o !== 'All').map(v => `<option value="${escHtml(v)}">${escHtml(displayOwner(v))}</option>`).join('');
+  if ([...fu.options].some(o => o.value === fuVal)) fu.value = fuVal;
+
+  const fe = document.getElementById('f-entity');
+  const feVal = fe.value;
+  fe.innerHTML = `<option value="all">All entities</option>` +
+    ENTITIES.filter(v => v !== 'All').map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+  if ([...fe.options].some(o => o.value === feVal)) fe.value = feVal;
+}
+
+// ── Config / init ─────────────────────────────────────────────────────────────
+function saveConfig() {
+  const base  = document.getElementById('cfg-base').value.trim();
+  const token = document.getElementById('cfg-token').value.trim();
+  const table = document.getElementById('cfg-table').value.trim();
+  if (!base || !token) return alert('Please enter both Base ID and Access Token.');
+  localStorage.setItem('cmc_at_base',  base);
+  localStorage.setItem('cmc_at_token', token);
+  localStorage.setItem('cmc_at_table', table || 'CloseTracker');
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initMonth();
+  loadMonthData();
+}
+
+/* ── Theme ── */
+function applyTheme(){document.body.classList.toggle('dark',localStorage.getItem('cmc_close_dark')==='1')}
+function toggleDarkMode(){const on=document.body.classList.toggle('dark');localStorage.setItem('cmc_close_dark',on?'1':'0');const t=document.getElementById('dark-track');if(t)t.classList.toggle('on',on)}
+function hideLoading(){const ol=document.getElementById('loading-overlay');if(!ol||ol.classList.contains('ld-gone'))return;ol.classList.add('ld-fade');setTimeout(()=>{ol.classList.add('ld-gone');ol.classList.remove('ld-fade')},520)}
+
+async function init() {
+  applyTheme();
+  loadTypeLists();
+  document.getElementById('app').style.display = 'flex';
+  updateOwnerToggleBtn();
+  initMonth();
+  await loadConfig();
+  refreshFilterDropdowns();
+  await loadMonthData();
+  initRowDrag();
+  hideLoading();
+  window.addEventListener('beforeprint', () => {
+    document.querySelectorAll('.note-inp').forEach(el => {
+      if (!el.value.trim()) el.closest('td').classList.add('print-hide');
+    });
+  });
+  window.addEventListener('afterprint', () => {
+    document.querySelectorAll('.print-hide').forEach(el => el.classList.remove('print-hide'));
+  });
+}
+
+init();
+</script>
+</body>
+</html>
