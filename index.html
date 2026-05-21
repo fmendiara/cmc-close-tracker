@@ -312,7 +312,7 @@ tr.row-done .task-name-text{text-decoration:line-through;color:var(--ink-3)}
   tr{break-inside:avoid}
   .task-name-line{margin-bottom:1px}
   .task-meta-line{gap:3px}
-  .task-nf-line,.flag-inp{display:none!important}
+  .task-nf-line,.flag-inp,.nf-tag,.nf-sel{display:none!important}
   .hero-card{background:#064E3B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-radius:8px;margin-bottom:6px;padding:12px 20px}
   .hero-pct{font-size:36px}
   .hero-kpi-num{font-size:20px}
@@ -1178,8 +1178,8 @@ async function saveTaskToAirtable(taskId) {
     Flag:      def.flag !== undefined ? def.flag : (d.flag || ''),
     Status:    d.status     || 'Not started',
     Note:      d.note       || '',
-    DueDate:       d.due           || '',
-    DateCompleted: d.dateCompleted || '',
+    DueDate:       d.due           || null,
+    DateCompleted: d.dateCompleted || null,
     Checked:       d.checked       || false,
     UpdatedBy: user !== 'all' ? user : (d.updatedBy || ''),
     NeededFor: (d.neededFor || []).join(',')
@@ -1345,7 +1345,6 @@ function renderRows(tasks, sectionKey) {
       <td class="col-task">
         <div class="task-name-line">
           <span class="task-name-text">${escHtml(t.task)}</span>
-          <input class="flag-inp" type="text" value="${flagVal}" placeholder="add flag…" onchange="updateFlag(${t.id},this.value)" title="Flag / tag" />
         </div>
         <div class="task-meta-line">
           <span class="entity-chip" style="${entityStyle}">${escHtml(t.entity)}</span>
