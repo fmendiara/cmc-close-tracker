@@ -130,8 +130,9 @@ table.tasks tr:hover td{background:rgba(246,243,237,.45)}
 .col-check{width:36px}
 .col-task{width:auto}
 .col-owner{width:80px}
-.col-due{width:106px}
+.col-due{width:126px}
 .col-status{width:126px}
+.col-completed{width:120px}
 .col-note{width:200px}
 .col-actions{width:56px}
 .check-wrap{display:flex;align-items:center;justify-content:center}
@@ -178,7 +179,9 @@ tr.row-done .task-name-text{text-decoration:line-through;color:var(--ink-3)}
 /* ── Note / due inputs ── */
 .note-inp{font-size:12px;padding:4px 8px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink);width:100%;transition:border-color .12s;font-family:inherit}
 .note-inp:focus{outline:none;border-color:var(--ink-3);background:#fff}
-.due-inp{font-size:11px;padding:4px 7px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink);width:100%;font-family:inherit}
+.due-inp{font-size:11px;padding:4px 2px 4px 7px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink);width:100%;font-family:inherit}
+.completed-inp{font-size:11px;padding:4px 2px 4px 7px;border:1px solid var(--rule);border-radius:4px;background:transparent;color:var(--ink);width:100%;font-family:inherit}
+.completed-inp:not([value=""]):not([value]){color:var(--field-dk);border-color:rgba(29,158,117,.3);background:rgba(240,253,249,.4)}
 .due-inp.due-past{border-color:#FCA5A5!important;color:#991B1B;font-weight:600}
 
 /* ── Action buttons ── */
@@ -313,7 +316,7 @@ tr.row-done .task-name-text{text-decoration:line-through;color:var(--ink-3)}
   .hero-card{background:#064E3B!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;border-radius:8px;margin-bottom:6px;padding:12px 20px}
   .hero-pct{font-size:36px}
   .hero-kpi-num{font-size:20px}
-  .note-inp,.due-inp,.status-sel{border:none;background:transparent!important;padding:0;font-size:10px}
+  .note-inp,.due-inp,.completed-inp,.status-sel{border:none;background:transparent!important;padding:0;font-size:10px}
   .badge,.entity-chip,.cadence-chip,.nf-tag{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr.row-done td{background:#F0FDF4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   tr.row-blocked td{background:#FFF5F5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1097,7 +1100,7 @@ async function atFetch(method, path, body) {
 async function loadMonthData() {
   taskData = {};
   airtableRecords = {};
-  TASK_DEFS.forEach(t => { taskData[t.id] = {status:'Not started', note:'', due:'', checked:false, updatedBy:'', neededFor:[]}; });
+  TASK_DEFS.forEach(t => { taskData[t.id] = {status:'Not started', note:'', due:'', dateCompleted:'', checked:false, updatedBy:'', neededFor:[]}; });
   setSyncStatus('saving');
   try {
     const formula = encodeURIComponent(`{Month}="${currentMonth}"`);
@@ -1114,7 +1117,7 @@ async function loadMonthData() {
       const id = f.TaskId;
       if (!id) return;
       airtableRecords[id] = r.id;
-      taskData[id] = { status: f.Status || 'Not started', note: f.Note || '', due: f.DueDate || '', checked: f.Checked || false, updatedBy: f.UpdatedBy || '', neededFor: f.NeededFor ? f.NeededFor.split(',').map(s=>s.trim()).filter(Boolean) : [] };
+      taskData[id] = { status: f.Status || 'Not started', note: f.Note || '', due: f.DueDate || '', dateCompleted: f.DateCompleted || '', checked: f.Checked || false, updatedBy: f.UpdatedBy || '', neededFor: f.NeededFor ? f.NeededFor.split(',').map(s=>s.trim()).filter(Boolean) : [] };
       if (id >= 1000) {
         taskData[id].section = f.Section; taskData[id].task = f.Task;
         taskData[id].entity  = f.Entity;  taskData[id].cadence = f.Cadence;
@@ -1175,8 +1178,9 @@ async function saveTaskToAirtable(taskId) {
     Flag:      def.flag !== undefined ? def.flag : (d.flag || ''),
     Status:    d.status     || 'Not started',
     Note:      d.note       || '',
-    DueDate:   d.due        || '',
-    Checked:   d.checked    || false,
+    DueDate:       d.due           || '',
+    DateCompleted: d.dateCompleted || '',
+    Checked:       d.checked       || false,
     UpdatedBy: user !== 'all' ? user : (d.updatedBy || ''),
     NeededFor: (d.neededFor || []).join(',')
   };
@@ -1284,6 +1288,7 @@ function renderAll() {
             <th class="col-owner">Owner</th>
             <th class="col-due">Due date</th>
             <th class="col-status">Status</th>
+            <th class="col-completed">Completed</th>
             <th class="col-note">Note</th>
             <th class="col-actions"></th>
           </tr></thead>
@@ -1355,6 +1360,7 @@ function renderRows(tasks, sectionKey) {
           ${opts(STATUSES, d.status)}
         </select>
       </td>
+      <td class="col-completed"><input type="date" class="completed-inp" value="${d.dateCompleted||''}" onchange="updateDateCompleted(${t.id},this.value)" /></td>
       <td class="col-note"><input class="note-inp" type="text" value="${(d.note||'').replace(/"/g,'&quot;')}" placeholder="Add note…" onchange="updateNote(${t.id},this.value)" /></td>
       <td class="col-actions">
         <button class="btn-edit" onclick="openEditModal(${t.id})" title="Edit task">&#9998;</button>
@@ -1583,17 +1589,27 @@ function updateStats() {
 
 // ── Task actions ──────────────────────────────────────────────────────────────
 function toggleCheck(id, val) {
-  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', dateCompleted:'', checked:false};
   taskData[id].checked = val;
-  if (val && taskData[id].status !== 'Done') taskData[id].status = 'Done';
+  if (val) {
+    if (taskData[id].status !== 'Done') taskData[id].status = 'Done';
+    if (!taskData[id].dateCompleted) taskData[id].dateCompleted = new Date().toISOString().slice(0,10);
+  } else {
+    taskData[id].dateCompleted = '';
+  }
   queueSave(id);
   renderAll();
 }
 
 function updateStatus(id, val, sel) {
-  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', dateCompleted:'', checked:false};
   taskData[id].status = val;
-  if (val === 'Done') taskData[id].checked = true;
+  if (val === 'Done') {
+    taskData[id].checked = true;
+    if (!taskData[id].dateCompleted) taskData[id].dateCompleted = new Date().toISOString().slice(0,10);
+  } else {
+    taskData[id].dateCompleted = '';
+  }
   const cls = val === 'Done' ? 's-done' : val === 'In progress' ? 's-ip' : val === 'Blocked' ? 's-blocked' : '';
   sel.className = 'status-sel ' + cls;
   sel.setAttribute('style', getColorStyle('statuses', val));
@@ -1608,8 +1624,14 @@ function updateNote(id, val) {
 }
 
 function updateDue(id, val) {
-  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', checked:false};
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', dateCompleted:'', checked:false};
   taskData[id].due = val;
+  queueSave(id);
+}
+
+function updateDateCompleted(id, val) {
+  if (!taskData[id]) taskData[id] = {status:'Not started', note:'', due:'', dateCompleted:'', checked:false};
+  taskData[id].dateCompleted = val;
   queueSave(id);
 }
 
