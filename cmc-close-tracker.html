@@ -930,8 +930,6 @@ async function executeCopy() {
   const copyDues   = document.getElementById('copy-due-dates').checked;
   if (!copyCustom && !copyDues) { closeCopyModal(); return; }
   closeCopyModal();
-  const base = localStorage.getItem('cmc_at_base');
-  if (!base) { renderAll(); return; }
   setSyncStatus('saving');
   try {
     const formula = encodeURIComponent(`{Month}="${srcYM}"`);
@@ -1100,8 +1098,6 @@ async function loadMonthData() {
   taskData = {};
   airtableRecords = {};
   TASK_DEFS.forEach(t => { taskData[t.id] = {status:'Not started', note:'', due:'', checked:false, updatedBy:'', neededFor:[]}; });
-  const base = localStorage.getItem('cmc_at_base');
-  if (!base) { renderAll(); return; }
   setSyncStatus('saving');
   try {
     const formula = encodeURIComponent(`{Month}="${currentMonth}"`);
@@ -1184,8 +1180,6 @@ async function saveTaskToAirtable(taskId) {
     UpdatedBy: user !== 'all' ? user : (d.updatedBy || ''),
     NeededFor: (d.neededFor || []).join(',')
   };
-  const base = localStorage.getItem('cmc_at_base');
-  if (!base) return;
   if (airtableRecords[taskId]) {
     await atFetch('PATCH', '/'+airtableRecords[taskId], {fields});
   } else {
